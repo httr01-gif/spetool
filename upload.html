@@ -99,10 +99,10 @@
 
     <div class="card">
       <h2>자료 파일 <span class="req">*</span></h2>
-      <p>파일 하나로 동작하는 HTML 자료만 올릴 수 있습니다. 400KB 이하.</p>
+      <p>파일 하나로 동작하는 HTML 자료만 올릴 수 있습니다. 4MB 이하.</p>
       <div class="drop" id="drop" tabindex="0" role="button">
         <b>파일을 여기에 끌어다 놓거나 눌러서 선택</b>
-        <span>확장자 .html 또는 .htm</span>
+        <span>확장자 .html 또는 .htm, 4MB 이하</span>
       </div>
       <input type="file" id="file" accept=".html,.htm,text/html" hidden>
       <div class="picked" id="picked" style="display:none"></div>
@@ -140,8 +140,8 @@
           </select>
         </div>
         <div class="fld">
-          <label for="form">형태</label>
-          <input type="text" id="form" list="dl-form" maxlength="20" placeholder="예: 보드게임">
+          <label for="formkind">형태</label>
+          <input type="text" id="formkind" list="dl-form" maxlength="20" placeholder="예: 보드게임">
           <datalist id="dl-form">
             <option>보드게임</option><option>퀴즈</option><option>복습 게임</option><option>아케이드</option>
             <option>동기유발</option><option>단계별 학습</option><option>활동 보조</option><option>기타</option>
@@ -248,7 +248,7 @@ var fileEl = document.getElementById("file"),
     form   = document.getElementById("form"),
     send   = document.getElementById("send");
 var htmlText = "", fileName = "";
-var MAX = 400 * 1024;
+var MAX = 4 * 1024 * 1024;
 
 function show(kind, text){ msg.className = "msg " + kind; msg.textContent = text; }
 function clearMsg(){ msg.className = "msg"; msg.textContent = ""; }
@@ -269,7 +269,7 @@ fileEl.onchange = function(){ if (fileEl.files[0]) take(fileEl.files[0]); };
 function take(f){
   clearMsg();
   if (!/\.html?$/i.test(f.name)) { show("err", "HTML 파일만 올릴 수 있습니다."); return; }
-  if (f.size > MAX) { show("err", "파일이 너무 큽니다. 400KB 이하만 올릴 수 있습니다. 큰 자료는 관리자에게 직접 전달해 주세요."); return; }
+  if (f.size > MAX) { show("err", "파일이 너무 큽니다. 4MB 이하만 올릴 수 있습니다. 더 큰 자료는 관리자에게 직접 전달해 주세요."); return; }
   var r = new FileReader();
   r.onload = function(){
     htmlText = String(r.result || "");
@@ -304,7 +304,7 @@ form.onsubmit = function(e){
     uploader: document.getElementById("uploader").value,
     subject: document.getElementById("subject").value,
     grade: document.getElementById("grade").value,
-    form: document.getElementById("form").value,
+    form: document.getElementById("formkind").value,
     players: document.getElementById("players").value,
     minutes: document.getElementById("minutes").value,
     tags: document.getElementById("tags").value,
@@ -315,20 +315,42 @@ form.onsubmit = function(e){
     consent: true
   };
 
-  send.disabled = true; send.textContent = "올리는 중";
+  var uid = "";
+  for (var i=0;i<24;i++) uid += "abcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random()*36)];
+
+  send.disabled = true; send.textContent = "파일 전송 중";
+
+  // 1단계 파일 원문 전송
   fetch("/api/upload", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
+    headers: {
+      "Content-Type": "text/plain; charset=utf-8",
+      "x-upload-key": payload.key,
+      "x-upload-uid": uid
+    },
+    body: htmlText
   })
   .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
   .then(function(res){
-    if (!res.ok) { show("err", (res.j && res.j.error) || "올리지 못했습니다."); return; }
+    if (!res.ok) throw new Error((res.j && res.j.error) || "파일을 올리지 못했습니다.");
+    send.textContent = "정보 저장 중";
+    payload.uid = uid;
+    payload.bytes = res.j.bytes || 0;
+    delete payload.html;
+    // 2단계 자료 정보 저장
+    return fetch("/api/upload", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    }).then(function(r2){ return r2.json().then(function(j2){ return { ok:r2.ok, j:j2 }; }); });
+  })
+  .then(function(res){
+    if (!res.ok) throw new Error((res.j && res.j.error) || "올리지 못했습니다.");
     form.style.display = "none";
     document.getElementById("done").style.display = "block";
     window.scrollTo(0, 0);
   })
-  .catch(function(){ show("err", "연결에 실패했습니다. 잠시 후 다시 시도해 주세요."); })
+  .catch(function(e){ show("err", e.message || "연결에 실패했습니다. 잠시 후 다시 시도해 주세요."); })
   .finally(function(){ send.disabled = false; send.textContent = "자료 올리기"; });
 };
 
