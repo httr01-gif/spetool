@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>모두의 컬링</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:#08152b; user-select:none; }
+  #app { position:relative; width:100%; height:100%; touch-action:manipulation; }
+  canvas { display:block; width:100%; height:100%; }
+
+  #topbar {
+    position:absolute; top:0; left:0; right:0; height:64px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 20px; color:#fff; z-index:10;
+    background:linear-gradient(180deg, rgba(8,21,43,.95), rgba(8,21,43,0)); pointer-events:none;
+  }
+  .score-box { text-align:center; }
+  .score-label { font-size:14px; opacity:.85; }
+  .score-num { font-size:30px; font-weight:800; line-height:1; }
+  .you .score-num { color:#ff5a5a; }
+  .ai .score-num { color:#ffd34e; }
+  #endinfo { font-size:15px; opacity:.9; text-align:center; }
+
+  #hint {
+    position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+    color:#fff; font-size:clamp(20px,5vw,30px); font-weight:700; text-align:center;
+    z-index:10; pointer-events:none; text-shadow:0 2px 8px rgba(0,0,0,.6); width:90%; transition:opacity .2s;
+  }
+  #subhint {
+    position:absolute; bottom:0; left:50%; transform:translateX(-50%);
+    color:#bcd3f5; font-size:16px; z-index:10; pointer-events:none; padding-bottom:6px;
+  }
+
+  #commentary {
+    position:absolute; top:74px; left:50%; transform:translateX(-50%);
+    max-width:88%; background:rgba(255,255,255,.96); color:#13243f;
+    padding:12px 18px; border-radius:18px; font-size:17px; line-height:1.45;
+    z-index:9; box-shadow:0 6px 20px rgba(0,0,0,.35); text-align:center; opacity:0; transition:opacity .3s; font-weight:600;
+  }
+  #commentary.show { opacity:1; }
+  #commentary .coach { display:block; margin-top:4px; font-size:14px; color:#3a6; font-weight:700; }
+
+  #overlay {
+    position:absolute; inset:0; z-index:20; background:rgba(6,16,33,.97);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#fff; padding:20px; text-align:center; overflow-y:auto;
+  }
+  #overlay h1 { font-size:clamp(32px,8vw,52px); margin-bottom:6px; letter-spacing:-1px; }
+  #overlay h1 span { color:#5fb0ff; }
+  #rules {
+    background:rgba(255,255,255,.06); border:1px solid #2f547f; border-radius:16px;
+    padding:16px 18px; max-width:460px; width:100%; margin:8px 0 20px; text-align:left;
+  }
+  #rules h3 { font-size:16px; color:#5fb0ff; margin-bottom:10px; text-align:center; }
+  #rules ol { list-style:none; counter-reset:r; }
+  #rules li { counter-increment:r; position:relative; padding:6px 0 6px 30px; font-size:15px; line-height:1.45; opacity:.95; }
+  #rules li::before {
+    content:counter(r); position:absolute; left:0; top:6px; width:22px; height:22px;
+    background:#2f6fd6; color:#fff; border-radius:50%; font-size:13px; font-weight:800;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .opt-group { margin-bottom:18px; width:100%; max-width:420px; }
+  .opt-title { font-size:14px; opacity:.7; margin-bottom:8px; }
+  .opt-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .opt-btn {
+    flex:1; min-width:90px; padding:13px 8px; border:2px solid #2f547f; border-radius:14px;
+    background:transparent; color:#cfe2ff; font-size:16px; font-weight:700; cursor:pointer; transition:all .15s;
+  }
+  .opt-btn.sel { background:#2f6fd6; border-color:#5fb0ff; color:#fff; }
+  #startBtn {
+    margin-top:4px; padding:17px 56px; font-size:23px; font-weight:800;
+    background:linear-gradient(135deg,#ff5a5a,#ff8a3d); color:#fff; border:none;
+    border-radius:50px; cursor:pointer; box-shadow:0 8px 24px rgba(255,90,90,.4);
+  }
+  #startBtn:active { transform:scale(.96); }
+  .badge { display:inline-block; background:#1c3a63; padding:4px 12px; border-radius:20px; font-size:13px; margin-top:14px; }
+
+  #result {
+    position:absolute; inset:0; z-index:21; background:rgba(6,16,33,.97);
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    color:#fff; padding:24px; text-align:center;
+  }
+  #result h2 { font-size:clamp(30px,8vw,48px); margin-bottom:12px; }
+  #result h2.pop { animation:rTitlePop .62s cubic-bezier(.2,1.7,.4,1); }
+  @keyframes rTitlePop { 0%{transform:scale(.35);opacity:0} 55%{transform:scale(1.18);opacity:1} 100%{transform:scale(1)} }
+  .confetti-wrap { position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:40; }
+  .confetti-pc { position:absolute; top:-24px; border-radius:2px; will-change:transform; }
+  @keyframes confFall { to { transform:translateY(115vh) rotate(var(--r)); opacity:.85; } }
+  #result .rscore { font-size:24px; margin-bottom:8px; }
+  #result .rmsg { font-size:18px; opacity:.85; margin-bottom:28px; max-width:420px; line-height:1.5; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="game"></canvas>
+
+  <div id="topbar">
+    <div class="score-box you"><div class="score-label" id="labelYou">학생</div><div class="score-num" id="scoreYou">0</div></div>
+    <div id="endinfo">엔드 <span id="endNow">1</span> / <span id="endMax">3</span></div>
+    <div class="score-box ai"><div class="score-label" id="labelAI">AI</div><div class="score-num" id="scoreAI">0</div></div>
+  </div>
+
+  <div id="commentary"></div>
+  <div id="hint"></div>
+  <div id="subhint"></div>
+
+  <div id="overlay">
+    <h1>모두의 <span>컬링</span></h1>
+    <div id="rules">
+      <h3>게임 방법</h3>
+      <ol>
+        <li><b>방향</b>: 조준선이 좌우로 자동으로 움직여요. 원하는 방향일 때 화면을 <b>탭</b>!</li>
+        <li><b>힘</b>: 게이지가 차오르면 원하는 세기에서 한 번 더 <b>탭</b>!</li>
+        <li><b>컬(곡선)</b>: 가운데 근처를 조준하면 <b>직선</b>, 좌·우 가장자리를 조준하면 그쪽으로 나갔다가 <b>가운데로 휘어 들어와요</b>! (가드를 돌아 하우스로!)</li>
+        <li>하우스(둥근 과녁) <b>중앙에 가까울수록</b> 좋아요.</li>
+        <li>번갈아 던지고, 중앙에 더 가까운 쪽이 점수를 얻어요. 엔드에서 <b>진 쪽이 다음 엔드에 먼저</b> 던져요!</li>
+      </ol>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-title">게임 인원</div>
+      <div class="opt-row" id="playersRow">
+        <button class="opt-btn sel" data-players="1">1인용 (AI 대결)</button>
+        <button class="opt-btn" data-players="2">2인용 (1:1 대결)</button>
+      </div>
+    </div>
+    <button id="startBtn">게임 시작</button>
+    <div class="badge">🔊 소리를 켜면 AI 해설을 들을 수 있어요</div>
+  </div>
+
+  <div id="result">
+    <h2 id="rTitle"></h2>
+    <div class="rscore" id="rScore"></div>
+    <div class="rmsg" id="rMsg"></div>
+    <button id="startBtn2" class="opt-btn sel" style="padding:16px 48px;font-size:20px;max-width:none;">다시 하기</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('game');
+  const ctx=cv.getContext('2d');
+  let W=0,H=0,DPR=Math.min(window.devicePixelRatio||1,2);
+
+  function resize(){
+    W=cv.clientWidth; H=cv.clientHeight;
+    cv.width=W*DPR; cv.height=H*DPR;
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    computeLayout();
+  }
+  window.addEventListener('resize',resize);
+
+  // ===== 3D 투영 설정 =====
+  // 월드 좌표: x(-1~1 좌우), z(0=가까운 던지는 곳, 1=먼 하우스)
+  // 원근 투영으로 화면 좌표 계산
+  let horizonY=0, vanishX=0;
+  let nearY=0, farY=0;
+  let nearHalfW=0, farHalfW=0;
+  const TOPBAR=64;
+
+  function computeLayout(){
+    // 세로(테이블 모니터)에서는 빙판을 더 넓고 길게 펴서 화면을 꽉 채운다.
+    const portrait = H > W;
+    vanishX=W*0.5;
+    horizonY=TOPBAR+ H*0.06;
+    farY=TOPBAR + H*(portrait?0.03:0.04);   // 하우스(먼 쪽) — 빙판을 상단까지 연장
+    nearY=H*(portrait?0.965:0.94);          // 던지는 곳(가까운 쪽) — 세로에선 바닥까지
+    nearHalfW=W*(portrait?0.49:0.46);       // 가까운 쪽 빙판 절반 폭 — 세로에선 거의 전폭
+    farHalfW=W*(portrait?0.26:0.13);        // 먼 쪽 빙판 절반 폭 — 세로에선 덜 좁혀 양옆 여백 축소
+  }
+
+  // 월드(x:-1~1, z:0~1) → 화면 좌표. z=0 가까움(아래), z=1 멀음(위)
+  function project(x, z){
+    const t=z; // 0..1
+    const y = nearY + (farY-nearY)*t;
+    const halfW = nearHalfW + (farHalfW-nearHalfW)*t;
+    const sx = vanishX + x*halfW;
+    const scale = halfW/nearHalfW;  // 멀수록 작아짐
+    return {sx, sy:y, scale};
+  }
+
+  // ===== 상태 =====
+  const ST={READY:'ready',AIM:'aim',POWER:'power',DELIVER:'deliver',SLIDE:'slide',BETWEEN:'between'};
+  let state=ST.AIM;
+  let stones=[];
+  let active=null;
+  let turn='you';
+  let firstThrower='you';  // 이번 엔드 선공 — 직전 엔드 승자가 있으면 '패자'가 다음 엔드 선공 (무득점 엔드면 유지)
+  let endNow=1; const END_MAX=3;
+  const STONES_PER_END=3;
+  let thrownYou=0, thrownAI=0;
+  let scoreYou=0, scoreAI=0;
+
+  // 조작: 탭 방식 하나로 통일 — 자동 스캔 조준선을 탭(방향) → 자동 게이지를 탭(힘)
+  // players 1 = AI 대결, 2 = 사람끼리 1:1
+  // 난이도·게이지 속도·도움 모드는 옵션 제거 → 고정값: 보통(diff 1)/느리게(speed 0)/도움 끔(assist 0)
+  let cfg={diff:1,speed:0,assist:0,players:1};
+  // 진영 라벨: 1인용은 학생/AI, 2인용은 플레이어 1/2
+  function ownerLabel(owner){
+    if(cfg.players===2) return owner==='you' ? '플레이어 1' : '플레이어 2';
+    return owner==='you' ? '학생' : 'AI';
+  }
+  // 해당 진영이 사람이 직접 조작하는가
+  function isHuman(owner){ return owner==='you' || cfg.players===2; }
+  function curOwner(){ return turn==='you' ? 'you' : 'ai'; }
+  let aimAngle=0,aimDir=1, power=0,powDir=1, lockedAngle=0;  // 스캔(탭) 조준
+  // 자동 컬: 조준 방향이 곧 컬을 결정 — 가운데 근처(±CURL_DEAD)는 직선,
+  // 그 밖은 조준한 쪽으로 나갔다가 가운데로 휘어 들어옴 (실제 컬링의 드로우 샷)
+  const CURL_K=0.036;            // 컬 강도 계수 (vz 비례)
+  const CURL_DEAD=0.35;          // 직선 구간: |조준각| ≤ 0.35 (스캔 범위 0.95의 약 37%)
+  function autoCurl(ang){
+    const m=Math.abs(ang);
+    if(m<=CURL_DEAD) return 0;
+    return -Math.sign(ang)*Math.min(1,(m-CURL_DEAD)/(0.95-CURL_DEAD));
+  }
+  let screenShake=0;
+  const impacts=[];
+
+  // 투구 애니메이션(손으로 미는 모습)
+  let deliver={t:0, x:0, power:0, owner:'you'};
+
+  const stoneWorldR=0.085;  // 월드상 스톤 반지름
+  const houseZ=0.86;        // 하우스 중심 z
+  const houseWorldR=0.42;   // 하우스 반지름(월드 x단위 기준 대략)
+
+  // ===== 음성 =====
+  let voices=[];
+  function loadVoices(){ voices=window.speechSynthesis?speechSynthesis.getVoices():[]; }
+  if(window.speechSynthesis){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+  function speak(t){
+    if(!window.speechSynthesis) return;
+    try{ speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(t); u.lang='ko-KR'; u.rate=1.0; u.pitch=1.05;
+      const kv=voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith('ko')); if(kv)u.voice=kv;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  // ===== AI 해설 =====
+  // 화면에 그려진 하우스 타원 기준 정규화 거리: <1 이면 중심이 하우스 안.
+  // (보이는 대로 득점되도록 화면 좌표로 직접 계산)
+  function dist2house(s){
+    const C=project(0,houseZ);
+    const rWh=houseWorldR*C.scale*nearHalfW;   // drawHouse의 바깥 링과 동일
+    const rHh=rWh*0.45;
+    const P=project(s.x,s.z);
+    const nx=(P.sx-C.sx)/rWh, ny=(P.sy-C.sy)/rHh;
+    return Math.hypot(nx,ny);
+  }
+  // 스톤 몸체가 하우스 가장자리에 걸치면 인정 (실제 컬링처럼 살짝 관대하게)
+  const IN_HOUSE = 1 + stoneWorldR/houseWorldR;  // ≈1.20
+  function closestOwner(){
+    let best=null,bd=Infinity;
+    for(const s of stones){ const d=dist2house(s); if(d<IN_HOUSE && d<bd){bd=d;best=s.owner;} }
+    return best;
+  }
+  function generateCommentary(owner, stone){
+    const d=dist2house(stone);
+    const near=d<0.35, mid=d<0.85;
+    const isClosest=closestOwner()===owner;
+    const youGood=['완벽해요! 하우스 중앙에 딱 붙었어요.','아주 좋아요. 차분한 투구였어요.','훌륭해요! 중앙을 정확히 노렸네요.'];
+    const youMid=['좋은 시도예요. 하우스 안에 잘 들어왔어요.','나쁘지 않아요! 조금만 더 가운데로.','잘했어요. 점점 감을 잡고 있어요.'];
+    const youFar=['괜찮아요, 다음 스톤으로 다시!','힘이 살짝 강했네요. 천천히 또 해봐요.','연습이에요, 다음엔 더 잘할 수 있어요!'];
+    const aiLine=['AI가 스톤을 던졌어요. 이제 학생 차례예요.','AI의 샷이 들어왔어요. 따라잡아 봐요!','AI가 신중하게 던졌네요. 집중해요.'];
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    // 1인용 AI 차례: 전용 멘트
+    if(owner==='ai' && cfg.players===1) return {main:pick(aiLine),coach:''};
+    // 2인용: 두 사람 모두 거리 기반 해설 (이름 붙여서)
+    if(cfg.players===2){
+      const label=ownerLabel(owner);
+      const g=near?'완벽해요! 하우스 중앙이에요.':(mid?'하우스 안에 잘 들어왔어요.':'아쉽게 벗어났어요.');
+      return {main:`${label}, ${g}`, coach:''};
+    }
+    let main=near?pick(youGood):(mid?pick(youMid):pick(youFar));
+    let coach='';
+    if(cfg.assist){
+      const powerTip = '🎯 코칭: 게이지가 더 찰 때까지 기다렸다 탭해 보세요.';
+      coach=isClosest?'🎯 코칭: 지금 1위예요. 이 느낌 그대로!':
+            (near?'🎯 코칭: 거의 다 왔어요!':powerTip);
+    }
+    return {main,coach};
+  }
+  function showCommentary(owner,stone){
+    const el=document.getElementById('commentary');
+    const c=generateCommentary(owner,stone);
+    el.innerHTML=c.main+(c.coach?`<span class="coach">${c.coach}</span>`:'');
+    el.classList.add('show'); speak(c.main);
+    clearTimeout(showCommentary._t);
+    showCommentary._t=setTimeout(()=>el.classList.remove('show'),3200);
+  }
+
+  const hint=document.getElementById('hint'), subhint=document.getElementById('subhint');
+  function setHint(m,s){ hint.textContent=m||''; subhint.textContent=s||''; }
+
+  cv.addEventListener('pointerdown',e=>{
+    e.preventDefault();
+    if(state===ST.AIM){          // 첫 탭 → 방향 확정
+      lockedAngle=aimAngle; state=ST.POWER; power=0; powDir=1;
+      setHint('힘이 좋을 때 한 번 더 탭!','게이지가 차오르고 있어요');
+    }
+    else if(state===ST.POWER){   // 두 번째 탭 → 발사 (컬은 조준 방향에서 자동 결정)
+      throwStone(lockedAngle, power, curOwner());
+    }
+  });
+
+  // 발사 후 스톤 예상 착지점 (마찰 시뮬레이션) — 도움 보정 반영해 실제와 일치
+  function predictLanding(aimA, power, extraFriction=0){
+    const speed=powerToSpeed(applyAssist(power,'you'));
+    let x=aimA*0.45, z=0.06;
+    let vx=aimA*0.9*speed, vz=speed;
+    const fr=0.975+extraFriction, spin=autoCurl(aimA);
+    for(let i=0;i<4000;i++){
+      x+=vx; z+=vz; vx+=spin*vz*CURL_K; vx*=fr; vz*=fr;
+      if(x<-1)x=-1; if(x>1)x=1;
+      if(z>=1.0||z<0) break;
+      if(Math.hypot(vx,vz)<0.0012) break;
+    }
+    return {x:Math.max(-1,Math.min(1,x)), z:Math.max(0,Math.min(1,z))};
+  }
+
+  // 컬을 반영한 예상 경로 점들 (곡선 가이드 표시용) — 실제 stepStone과 동일한 순서로 시뮬레이션
+  function simPath(aimA, power, curl){
+    const speed=powerToSpeed(applyAssist(power,'you'));
+    let x=aimA*0.45, z=0.06;
+    let vx=aimA*0.9*speed, vz=speed;
+    const pts=[{x,z}];
+    for(let i=0;i<4000;i++){
+      x+=vx; z+=vz;
+      vx+=(curl||0)*vz*CURL_K;
+      vx*=0.975; vz*=0.975;
+      if(x<-1+stoneWorldR){x=-1+stoneWorldR;vx*=-0.5;}
+      if(x>1-stoneWorldR){x=1-stoneWorldR;vx*=-0.5;}
+      if(i%3===0) pts.push({x, z});
+      if(z>=1.0||z<0) break;
+      if(Math.hypot(vx,vz)<0.0012) break;
+    }
+    pts.push({x, z:Math.min(1,z)});
+    return pts;
+  }
+
+  // 투구 실행 (방향·힘 확정 후 호출)
+  function throwStone(aimA, pw, owner){
+    pw=applyAssist(pw, owner);
+    deliver={t:0, x:aimA, power:Math.max(0.05,Math.min(1,pw)), owner};
+    state=ST.DELIVER;
+    setHint('','');
+  }
+  // 도움 모드: 힘을 하우스 중앙(0.65)쪽으로 살짝 보정
+  function applyAssist(pw, owner){
+    if(cfg.assist && isHuman(owner)){ const ideal=0.70; pw=pw+(ideal-pw)*0.4; }
+    return pw;
+  }
+  // 힘(0~1) → z방향 속도. 약 70%에서 하우스 중앙, 100%에서 백보드에 닿도록 보정
+  function powerToSpeed(p){ return 0.013 + p*0.0117; }
+
+  function finishDeliver(){
+    const p=deliver.power;
+    const speed=powerToSpeed(p);
+    // 조준선이 가리키던 각도(deliver.x)를 그대로 vx 방향으로 사용
+    const ang=deliver.x*0.9;   // 조준선 최대 편각(0.9)과 동일한 스케일
+    active={
+      x: deliver.x*0.45, z:0.06,   // 발사 시작 위치도 조준 방향에 맞게
+      vx: ang*speed,
+      vz: speed,
+      owner:deliver.owner, resting:false, trail:[],
+      // 조준 방향에서 자동 결정된 컬 (미세 랜덤은 손맛용으로만 남김)
+      spin:autoCurl(deliver.x)+(Math.random()*2-1)*0.02
+    };
+    state=ST.SLIDE;
+    setHint('','');
+  }
+
+  // ===== AI 턴 =====
+  function aiThrow(){
+    setHint('AI가 던지는 중...','');
+    const err=[0.16,0.09,0.035][cfg.diff];
+    const ex=(Math.random()*2-1)*err;
+    const ep=0.70+(Math.random()*2-1)*err*1.8;  // 0.70≈하우스 중앙
+    setTimeout(()=>{
+      deliver={t:0, x:ex*1.2, power:Math.max(0.25,Math.min(1,ep)), owner:'ai'};
+      state=ST.DELIVER;
+    },700);
+  }
+
+  // ===== 물리 =====
+  function stepStone(s){
+    s.x+=s.vx; s.z+=s.vz;
+    s.vx+=s.spin*s.vz*CURL_K; // 컬(휘어짐): 전진 속도에 비례 → 느려질수록 자연히 잦아듦(안정적)
+    s.vx*=0.975; s.vz*=0.975; // 마찰 — 저속 꼬리가 짧아지도록 키움
+    if(s.x<-1+stoneWorldR){s.x=-1+stoneWorldR;s.vx*=-0.5;}
+    if(s.x>1-stoneWorldR){s.x=1-stoneWorldR;s.vx*=-0.5;}
+  }
+  let slideEnding=false;   // 턴 종료(다음 차례 예약)를 한 번만 실행하기 위한 가드
+  function physics(){
+    // ── 액티브(방금 던진) 스톤: 전진 + 다른 스톤과의 충돌 ──
+    if(active){
+      stepStone(active);
+      // 궤적 트레일 기록 (컬로 휘는 경로가 눈에 보이도록)
+      if(active.trail){ active.trail.push({x:active.x,z:active.z}); if(active.trail.length>60) active.trail.shift(); }
+
+      const A=project(active.x,active.z);
+      for(const s of stones){
+        // 화면에 그려진 스톤 타원(원근 축소 + 0.7 납작)과 일치하도록 z축을 보정한
+        // '등방(원형) 좌표'에서 감지·분리·충격량을 모두 처리 — 좌표계 혼용으로 인한 헛충돌 방지.
+        const B=project(s.x,s.z);
+        const sAvg=(A.scale+B.scale)/2;
+        const kz = (nearHalfW>0 && sAvg>0) ? (nearY-farY)/(nearHalfW*0.7*sAvg) : 4;
+        const dx=active.x-s.x, dzc=(active.z-s.z)*kz;   // 보정 좌표에서의 z 거리
+        const d=Math.hypot(dx, dzc), min=stoneWorldR*2;
+        if(d>0 && d<min){
+          const nx=dx/d, nz=dzc/d;                       // 보정 좌표 단위 법선
+          const ov=min-d;                                // 겹침(보정 좌표)
+          active.x+=nx*ov*0.5;      s.x-=nx*ov*0.5;       // 분리 (z는 /kz로 실제 좌표 환산)
+          active.z+=(nz*ov*0.5)/kz; s.z-=(nz*ov*0.5)/kz;
+          // 서로 가까워지는 중일 때만 충격량 전달 (스치거나 이미 벌어지면 헛움직임 없음)
+          const rel=(active.vx-s.vx)*nx + ((active.vz-s.vz)*kz)*nz;
+          if(rel<0){
+            const j=0.8*rel;
+            active.vx-=j*nx; active.vz-=(j*nz)/kz;
+            s.vx+=j*nx;      s.vz+=(j*nz)/kz;
+            s.resting=false;
+            const spd=Math.abs(rel);
+            if(spd>0.003){
+              impacts.push({x:(active.x+s.x)*0.5, z:(active.z+s.z)*0.5, t:0, spd});
+            }
+          }
+        }
+      }
+    }
+    // ── 맞아서 굴러가는 다른 스톤들 ──
+    // 버그 수정: 액티브가 멈춰도 여기서 계속 시뮬레이션해 '끝까지' 굴러가 멈추게 한다.
+    // (예전엔 active가 null이 되는 순간 physics 전체가 return 돼, 굴러가던 스톤이
+    //  공중에서 얼어붙었다가 다음 투구 때 되살아나 '안 부딪쳤는데 움직이는' 것처럼 보였음)
+    for(const s of stones){
+      if(!s.resting){ s.x+=s.vx; s.z+=s.vz; s.vx*=0.95; s.vz*=0.95;
+        if(s.x<-1+stoneWorldR){s.x=-1+stoneWorldR;s.vx*=-.5;}
+        if(s.x>1-stoneWorldR){s.x=1-stoneWorldR;s.vx*=-.5;}
+        if(Math.hypot(s.vx,s.vz)<0.0012){ s.vx=0; s.vz=0; s.resting=true; }  // 잔여 속도 완전 제거
+      }
+    }
+    if(active){
+      // 시작선 뒤로 나간 스톤 — 아웃
+      if(active.z<0){ stopActive(true); return; }
+      // 빙판 먼 끝(백보드)에 닿으면 멈춤
+      if(active.z>=1.0){ active.z=1.0; active.vz=0; active.vx*=0.3; }
+      if(Math.hypot(active.vx,active.vz)<0.0012){ stopActive(false); return; }
+    } else if(stones.every(s=>s.resting)){
+      // 액티브도 놓였고 굴러가던 스톤도 모두 정지 → 이제 턴 종료
+      endSlide();
+    }
+  }
+  function stopActive(out){
+    const t=active; t.resting=true; t.vx=0; t.vz=0;
+    if(!out) stones.push(t);
+    active=null;
+    showCommentary(t.owner,t);
+    // 턴 넘기기는 다른 스톤들이 다 멈춘 뒤 physics()에서 endSlide()로 처리
+  }
+  function endSlide(){
+    if(slideEnding) return;
+    slideEnding=true;
+    setTimeout(()=>{ slideEnding=false; nextTurn(); },600);
+  }
+
+  function nextTurn(){
+    if(turn==='you') thrownYou++; else thrownAI++;
+    if(thrownYou>=STONES_PER_END && thrownAI>=STONES_PER_END){ endScoring(); return; }
+    // 남은 투구 수에 따라 다음 순서 결정
+    const nextYou = thrownYou < STONES_PER_END;
+    const nextAI  = thrownAI  < STONES_PER_END;
+    if(nextYou && nextAI) turn=(turn==='you')?'ai':'you';
+    else if(nextYou)  turn='you';
+    else              turn='ai';
+    beginTurn();
+  }
+  function beginTurn(){
+    const owner=curOwner();
+    if(isHuman(owner)){
+      const who = cfg.players===2 ? ownerLabel(owner)+' 차례 — ' : '';
+      state=ST.AIM; aimAngle=0; aimDir=1;
+      setHint(who+'방향이 좋을 때 화면을 탭!','조준선이 좌우로 움직여요');
+    } else { state=ST.READY; aiThrow(); }
+  }
+
+  function endScoring(){
+    state=ST.BETWEEN;
+    const arr=stones.map(s=>({owner:s.owner,d:dist2house(s)})).filter(o=>o.d<IN_HOUSE).sort((a,b)=>a.d-b.d);
+    let gainYou=0,gainAI=0;
+    if(arr.length){
+      const winner=arr[0].owner;
+      const oppBest=arr.find(o=>o.owner!==winner);
+      const limit=oppBest?oppBest.d:Infinity;
+      let cnt=0;
+      for(const o of arr){ if(o.owner===winner&&o.d<limit)cnt++; else if(o.owner!==winner)break; }
+      if(winner==='you') gainYou=cnt; else gainAI=cnt;
+    }
+    scoreYou+=gainYou; scoreAI+=gainAI;
+    document.getElementById('scoreYou').textContent=scoreYou;
+    document.getElementById('scoreAI').textContent=scoreAI;
+    // 다음 엔드 선공: 이긴 쪽의 상대(패자)가 먼저 던짐 — 무득점 엔드면 순서 유지
+    if(gainYou>0) firstThrower='ai';
+    else if(gainAI>0) firstThrower='you';
+    let msg=gainYou>0?`이번 엔드에서 ${ownerLabel('you')}이(가) ${gainYou}점을 얻었어요!`
+          :gainAI>0?`이번 엔드는 ${ownerLabel('ai')}이(가) ${gainAI}점을 가져갔어요.`
+          :'이번 엔드는 득점 없이 끝났어요.';
+    if(endNow<END_MAX && (gainYou>0||gainAI>0)) msg+=` 다음 엔드는 ${ownerLabel(firstThrower)}이(가) 먼저 던져요!`;
+    const el=document.getElementById('commentary'); el.innerHTML=msg; el.classList.add('show'); speak(msg);
+    setTimeout(()=>{ el.classList.remove('show');
+      if(endNow>=END_MAX) finishGame();
+      else { endNow++; document.getElementById('endNow').textContent=endNow; startEnd(); }
+    },2600);
+  }
+  function startEnd(){ stones=[]; active=null; slideEnding=false; thrownYou=0; thrownAI=0; turn=firstThrower; screenShake=0; impacts.length=0; beginTurn(); }
+  // ===== 승리 축하 효과 (효과음 + 색종이 + 제목 팝인) =====
+  let actx=null;
+  function ensureAudio(){ if(!actx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) actx=new AC(); } if(actx&&actx.state==='suspended') actx.resume(); }
+  function tone(freq,start,dur,type='sine',gain=0.09){
+    if(!actx) return;
+    const now=actx.currentTime,o=actx.createOscillator(),g=actx.createGain();
+    o.type=type; o.frequency.setValueAtTime(freq,now+start);
+    g.gain.setValueAtTime(0.0001,now+start);
+    g.gain.exponentialRampToValueAtTime(gain,now+start+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001,now+start+dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(now+start); o.stop(now+start+dur+0.03);
+  }
+  function cheer(){   // 환호성 느낌의 노이즈 스웰
+    if(!actx) return;
+    const now=actx.currentTime,len=Math.floor(actx.sampleRate*0.55);
+    const b=actx.createBuffer(1,len,actx.sampleRate),d=b.getChannelData(0);
+    for(let i=0;i<len;i++){ const env=Math.sin(Math.PI*i/len); d[i]=(Math.random()*2-1)*env*0.8; }
+    const s=actx.createBufferSource(); s.buffer=b;
+    const bp=actx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1500; bp.Q.value=0.6;
+    const g=actx.createGain(); g.gain.value=0.5;
+    s.connect(bp); bp.connect(g); g.connect(actx.destination); s.start(now);
+  }
+  function popResultTitle(){ const el=document.getElementById('rTitle'); el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
+  function playVictory(win){
+    ensureAudio();
+    if(win){
+      [523,659,784,1047].forEach((f,k)=>tone(f,k*0.13,0.26,'triangle',0.11));  // 상승 팡파르
+      tone(1319,0.55,0.5,'sine',0.09); cheer();
+      if(navigator.vibrate) navigator.vibrate([60,40,60,40,140]);
+    } else {  // 무승부/패: 부드러운 종료음
+      tone(440,0,0.35,'sine',0.08); tone(587,0.14,0.4,'sine',0.07);
+      if(navigator.vibrate) navigator.vibrate(60);
+    }
+  }
+  function makeConfetti(colors){
+    document.querySelectorAll('.confetti-wrap').forEach(w=>w.remove());
+    const wrap=document.createElement('div'); wrap.className='confetti-wrap';
+    for(let i=0;i<100;i++){
+      const p=document.createElement('div'); p.className='confetti-pc';
+      p.style.left=(Math.random()*100)+'%'; p.style.background=colors[i%colors.length];
+      p.style.width=(6+Math.random()*7)+'px'; p.style.height=(9+Math.random()*11)+'px';
+      p.style.opacity=(0.8+Math.random()*0.2).toFixed(2);
+      p.style.setProperty('--r',(Math.random()*900-450)+'deg');
+      p.style.animation='confFall '+(2.4+Math.random()*2).toFixed(2)+'s linear '+(Math.random()*0.7).toFixed(2)+'s forwards';
+      wrap.appendChild(p);
+    }
+    document.body.appendChild(wrap); setTimeout(()=>wrap.remove(),5200);
+  }
+
+  function finishGame(){
+    const res=document.getElementById('result'); let t,m;
+    if(cfg.players===2){
+      if(scoreYou>scoreAI){ t='🎉 플레이어 1 승리!'; m=`${scoreYou} 대 ${scoreAI}, 멋진 경기였어요!`; }
+      else if(scoreYou<scoreAI){ t='🎉 플레이어 2 승리!'; m=`${scoreAI} 대 ${scoreYou}, 멋진 경기였어요!`; }
+      else { t='무승부!'; m='막상막하의 멋진 경기였어요!'; }
+    } else {
+      if(scoreYou>scoreAI){ t='🎉 승리!'; m='멋지게 해냈어요! 차분한 투구가 빛났어요.'; }
+      else if(scoreYou<scoreAI){ t='아쉬워요!'; m='좋은 경기였어요. 다음엔 더 잘할 수 있어요!'; }
+      else { t='무승부!'; m='막상막하의 멋진 경기였어요!'; }
+    }
+    document.getElementById('rTitle').textContent=t;
+    document.getElementById('rScore').textContent=`${ownerLabel('you')} ${scoreYou} : ${scoreAI} ${ownerLabel('ai')}`;
+    document.getElementById('rMsg').textContent=m;
+    res.style.display='flex';
+    // 승리 축하: 팡파르 + 환호 + 색종이 + 제목 팝인 (건조한 음성 대신)
+    popResultTitle();
+    const RED=['#ff5a5a','#ff8a8a','#ff8a3d','#ffffff','#ffd34e'];
+    const AMB=['#ffd34e','#ffe58a','#5fb0ff','#ffffff','#ff8a3d'];
+    if(scoreYou===scoreAI){ playVictory(false); }
+    else if(cfg.players===2){ playVictory(true); makeConfetti(scoreYou>scoreAI?RED:AMB); }
+    else if(scoreYou>scoreAI){ playVictory(true); makeConfetti(RED); }   // 1인용 학생 승
+    else { playVictory(false); }                                        // 1인용 학생 패: 부드럽게
+  }
+
+  // ===== 그리기 =====
+  function drawIce(){
+    // 빙판 사다리꼴(원근)
+    const nL=project(-1,0), nR=project(1,0), fL=project(-1,1), fR=project(1,1);
+    const g=ctx.createLinearGradient(0,farY,0,nearY);
+    g.addColorStop(0,'#cfe0f2'); g.addColorStop(1,'#eef5fc');
+    ctx.beginPath();
+    ctx.moveTo(nL.sx,nL.sy); ctx.lineTo(nR.sx,nR.sy); ctx.lineTo(fR.sx,fR.sy); ctx.lineTo(fL.sx,fL.sy); ctx.closePath();
+    ctx.fillStyle=g; ctx.fill();
+  }
+  function drawHouse(){
+    // 하우스를 원근으로 타원처럼
+    const c=project(0,houseZ);
+    const rings=[[1.0,'#2b6fb5'],[0.66,'#eef4fb'],[0.40,'#e34b4b'],[0.16,'#eef4fb']];
+    for(const [rr,col] of rings){
+      const rW=houseWorldR*rr*c.scale*nearHalfW; // 화면상 가로 반지름
+      const rH=rW*0.45;  // 원근으로 납작
+      ctx.beginPath(); ctx.ellipse(c.sx, c.sy, rW, rH, 0, 0, Math.PI*2);
+      ctx.fillStyle=col; ctx.fill();
+    }
+    // 중심점
+    ctx.beginPath(); ctx.ellipse(c.sx,c.sy,3,2,0,0,Math.PI*2); ctx.fillStyle='#1a3a5c'; ctx.fill();
+  }
+  function drawLines(){
+    // 중앙 라인
+    const a=project(0,0), b=project(0,1);
+    ctx.strokeStyle='rgba(40,80,130,.18)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+    // 호그라인(가로)
+    const h1L=project(-1,0.45), h1R=project(1,0.45);
+    ctx.strokeStyle='rgba(220,80,80,.5)'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(h1L.sx,h1L.sy); ctx.lineTo(h1R.sx,h1R.sy); ctx.stroke();
+  }
+  function drawStone3D(x,z,owner,scaleBoost=1){
+    const p=project(x,z);
+    const rW=stoneWorldR*p.scale*nearHalfW*scaleBoost;
+    const rH=rW*0.7;
+    // 그림자
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy+rH*0.5, rW*1.05, rH*0.5, 0,0,Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,.25)'; ctx.fill();
+    // 화강암 몸체(측면 약간)
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy, rW, rH, 0,0,Math.PI*2);
+    const bg=ctx.createLinearGradient(p.sx-rW,p.sy-rH,p.sx+rW,p.sy+rH);
+    bg.addColorStop(0,'#5a5f66'); bg.addColorStop(0.5,'#7c828a'); bg.addColorStop(1,'#3f444a');
+    ctx.fillStyle=bg; ctx.fill();
+    // 윗면
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy-rH*0.35, rW*0.9, rH*0.7, 0,0,Math.PI*2);
+    ctx.fillStyle='#9aa0a8'; ctx.fill();
+    // 손잡이(핸들)
+    const col=owner==='you'?'#ff5a5a':'#ffd34e';
+    ctx.beginPath(); ctx.ellipse(p.sx, p.sy-rH*0.4, rW*0.42, rH*0.42, 0,0,Math.PI*2);
+    ctx.fillStyle=col; ctx.fill();
+    ctx.beginPath(); ctx.roundRect(p.sx-rW*0.08, p.sy-rH*1.1, rW*0.16, rH*0.8, 3);
+    ctx.fillStyle=col; ctx.fill();
+    return p;
+  }
+
+  // 손으로 미는 모습 (투구 애니메이션)
+  function drawDeliveringHand(){
+    // deliver.t: 0→1. 0.7까지 밀고, 0.7~1에서 손 떼기
+    const t=deliver.t;
+    const z = 0.02 + t*0.10;           // 스톤이 살짝 앞으로
+    const x = deliver.x*0.5*t;
+    const owner=deliver.owner;
+    // 스톤
+    const p=drawStone3D(x, z, owner, 1.15);
+    // 손(팔) — 스톤 뒤쪽(아래)에서 밀기
+    if(t<0.78){
+      const handX=p.sx, handY=p.sy + p.scale*40;
+      ctx.save();
+      // 팔뚝
+      ctx.strokeStyle='#e8b98f'; ctx.lineWidth=Math.max(14*p.scale,10); ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(handX, handY+60); ctx.lineTo(handX, handY); ctx.stroke();
+      // 소매
+      ctx.strokeStyle='#3a6fd0'; ctx.lineWidth=Math.max(18*p.scale,12);
+      ctx.beginPath(); ctx.moveTo(handX, handY+95); ctx.lineTo(handX, handY+55); ctx.stroke();
+      // 손등(위에서 본 손) — 손등 면 + 손가락 마디
+      const hw=15*Math.max(p.scale,0.6), hh=13*Math.max(p.scale,0.6);
+      ctx.fillStyle='#f0c69a';
+      roundRect(handX-hw, handY-hh, hw*2, hh*1.6, 6); ctx.fill();
+      ctx.strokeStyle='#d9a877'; ctx.lineWidth=1.5; ctx.stroke();
+      // 손가락 4개(스톤을 감싸 미는 모양)
+      for(let f=0;f<4;f++){
+        roundRect(handX-hw + f*(hw*2/4)+2, handY-hh-hh*0.7, hw*2/4-3, hh*0.9, 3);
+        ctx.fillStyle='#f0c69a'; ctx.fill(); ctx.stroke();
+      }
+      ctx.restore();
+    } else {
+      // 손 떼는 순간 — 작은 속도선
+      ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=2;
+      for(let i=0;i<3;i++){
+        const yy=p.sy+ p.scale*(20+i*10);
+        ctx.beginPath(); ctx.moveTo(p.sx-15, yy); ctx.lineTo(p.sx-35, yy); ctx.stroke();
+      }
+    }
+  }
+
+  function drawArena(){
+    const fL=project(-1,1), fR=project(1,1);
+    const nL=project(-1,0), nR=project(1,0);
+
+    // 빙판 위 얇은 관중석 띠 — 빙판 색과 자연스럽게 이어지도록 그라데이션
+    const stG=ctx.createLinearGradient(0,TOPBAR,0,fL.sy);
+    stG.addColorStop(0,'#0e1f3a');      // 맨 위: 어두운 빙상장
+    stG.addColorStop(0.6,'#1a3360');
+    stG.addColorStop(1,'#cfe0f2');      // 빙판 색과 매끄럽게 이음
+    ctx.fillStyle=stG;
+    ctx.fillRect(0,TOPBAR,W,fL.sy-TOPBAR);
+
+    // 관중 실루엣 — 맨 위쪽에 한 줄만
+    ctx.fillStyle='#0c1d38';
+    ctx.beginPath();
+    ctx.moveTo(0,TOPBAR);
+    for(let x=0;x<W;x+=10){
+      const h=TOPBAR+6+Math.abs(Math.sin(x*0.41)*5);
+      ctx.lineTo(x,h); ctx.lineTo(x+5,h-2);
+    }
+    ctx.lineTo(W,TOPBAR); ctx.closePath(); ctx.fill();
+
+    // 조명 등기구 (천장)
+    for(let i=0;i<4;i++){
+      const lx=W*(i+0.5)/4;
+      ctx.fillStyle='rgba(220,235,255,.65)';
+      ctx.beginPath(); ctx.ellipse(lx,TOPBAR+2,4,2,0,0,Math.PI*2); ctx.fill();
+      const lg=ctx.createRadialGradient(lx,TOPBAR+2,0,lx,TOPBAR+2,50);
+      lg.addColorStop(0,'rgba(200,225,255,.10)'); lg.addColorStop(1,'rgba(200,225,255,0)');
+      ctx.fillStyle=lg; ctx.fillRect(lx-50,TOPBAR,100,60);
+    }
+
+    // 백보드 (빙판 먼 끝 펜스)
+    ctx.fillStyle='#dce9f6';
+    ctx.beginPath();
+    ctx.moveTo(fL.sx-3,fL.sy-4); ctx.lineTo(fR.sx+3,fR.sy-4);
+    ctx.lineTo(fR.sx+3,fR.sy+7); ctx.lineTo(fL.sx-3,fL.sy+7);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(210,45,55,.9)';   // 빨간 상단 띠
+    ctx.beginPath();
+    ctx.moveTo(fL.sx-3,fL.sy-4); ctx.lineTo(fR.sx+3,fR.sy-4);
+    ctx.lineTo(fR.sx+3,fR.sy-1); ctx.lineTo(fL.sx-3,fL.sy-1);
+    ctx.closePath(); ctx.fill();
+
+    // 사이드 보드 (빙판 양쪽 펜스)
+    ctx.lineCap='butt';
+    ctx.strokeStyle='#d8e7f5'; ctx.lineWidth=7;
+    ctx.beginPath(); ctx.moveTo(nL.sx,nL.sy); ctx.lineTo(fL.sx,fL.sy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(nR.sx,nR.sy); ctx.lineTo(fR.sx,fR.sy); ctx.stroke();
+    ctx.strokeStyle='rgba(210,45,55,.75)'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(nL.sx+4,nL.sy); ctx.lineTo(fL.sx+2,fL.sy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(nR.sx-4,nR.sy); ctx.lineTo(fR.sx-2,fR.sy); ctx.stroke();
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.save();
+
+    const bg=ctx.createLinearGradient(0,0,0,H);
+    bg.addColorStop(0,'#0a1830'); bg.addColorStop(1,'#102a4d');
+    ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+    drawArena(); drawIce(); drawLines(); drawHouse();
+
+    // 멈춘 스톤
+    const sorted=[...stones].sort((a,b)=>b.z-a.z);
+    for(const s of sorted) drawStone3D(s.x,s.z,s.owner);
+
+    if(state===ST.SLIDE && active){
+      // 궤적 트레일 — 스톤이 지나온 곡선 경로를 점점 옅어지는 점으로 표시
+      if(active.trail && active.trail.length>1){
+        for(let i=0;i<active.trail.length;i+=2){
+          const t=active.trail[i], p=project(t.x,t.z);
+          const a=0.35*(i/active.trail.length);
+          ctx.beginPath(); ctx.arc(p.sx,p.sy,3.2*p.scale+1,0,Math.PI*2);
+          ctx.fillStyle=`rgba(140,220,255,${a.toFixed(3)})`; ctx.fill();
+        }
+      }
+      drawStone3D(active.x,active.z,active.owner,1.1);
+    }
+    if(state===ST.DELIVER) drawDeliveringHand();
+
+    // ── 탭(스캔) 조준 UI ──
+    if(state===ST.AIM || state===ST.POWER){
+      drawStone3D(0,0.04,'you',1.15);
+      const ang=(state===ST.AIM)?aimAngle:lockedAngle;
+      // 조준선 (점선) — 컬을 반영한 곡선 경로 (가운데 구간은 직선, 밖은 휘어 들어옴)
+      // 힘은 아직 모르므로 대표값(0.75)으로 궤적 '모양'만 안내 (실제 도달 거리는 힘에 따라 달라짐)
+      const curl=autoCurl(ang);
+      const path=simPath(ang, 0.75, curl).filter(p=>p.z<=0.84);
+      ctx.setLineDash([8,8]);
+      ctx.strokeStyle=(state===ST.POWER)?'rgba(255,220,50,.9)':(curl!==0?'rgba(120,230,140,.9)':'rgba(255,100,100,.85)');
+      ctx.lineWidth=4;
+      ctx.beginPath();
+      for(let i=0;i<path.length;i++){ const p=project(path[i].x,path[i].z); if(i===0)ctx.moveTo(p.sx,p.sy); else ctx.lineTo(p.sx,p.sy); }
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // 컬 구간 표시: 휘는 조준일 때 '컬!' 라벨
+      if(curl!==0 && state===ST.AIM){
+        const tip=path[path.length-1], tp=project(tip.x,tip.z);
+        ctx.font='bold 15px sans-serif'; ctx.textAlign='center';
+        ctx.fillStyle='rgba(120,230,140,.95)';
+        ctx.fillText(curl<0?'↰ 컬':'컬 ↱', tp.sx, tp.sy-14);
+        ctx.textAlign='left';
+      }
+      if(state===ST.POWER){
+        // 예상 착지점 — 도움 모드일 때만 (난이도 조절)
+        if(cfg.assist){
+          const pred=predictLanding(ang,power,0);
+          const pp=project(pred.x,pred.z);
+          const pulse=0.75+Math.sin(performance.now()/180)*0.25;
+          ctx.beginPath(); ctx.arc(pp.sx,pp.sy,16*pulse,0,Math.PI*2);
+          ctx.strokeStyle='rgba(255,220,50,.85)'; ctx.lineWidth=3; ctx.stroke();
+          ctx.beginPath(); ctx.arc(pp.sx,pp.sy,5,0,Math.PI*2);
+          ctx.fillStyle='rgba(255,220,50,.9)'; ctx.fill();
+        }
+        // 파워 바
+        const gx=W*.5-100,gy=nearY-44,gw=200,gh=20;
+        ctx.fillStyle='rgba(8,20,45,.88)'; roundRect(gx-4,gy-4,gw+8,gh+8,10); ctx.fill();
+        const gr=ctx.createLinearGradient(gx,0,gx+gw,0);
+        gr.addColorStop(0,'#4caf50'); gr.addColorStop(0.55,'#ffd34e'); gr.addColorStop(1,'#ff5a5a');
+        ctx.fillStyle=gr; roundRect(gx,gy,gw*power,gh,8); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.7)'; ctx.font='bold 11px sans-serif';
+        ctx.textAlign='center'; ctx.fillText(`힘 ${Math.round(power*100)}%`, W*.5, gy-7);
+        ctx.textAlign='left';
+      }
+    }
+
+    // ── 임팩트 링 ──
+    for(let i=impacts.length-1;i>=0;i--){
+      const imp=impacts[i];
+      const pp=project(imp.x,imp.z);
+      const r=imp.t*pp.scale*nearHalfW*0.55;
+      ctx.beginPath(); ctx.arc(pp.sx,pp.sy,r,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(255,255,255,${0.8*(1-imp.t)})`; ctx.lineWidth=2+imp.spd*30; ctx.stroke();
+      imp.t+=0.07;
+      if(imp.t>=1) impacts.splice(i,1);
+    }
+
+    ctx.restore();
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+
+  function update(){
+    const sp=cfg.speed===0?0.012:0.022;
+    if(state===ST.AIM){          // 조준선 자동 좌우 스캔
+      aimAngle+=aimDir*sp;
+      if(aimAngle>0.95){aimAngle=0.95;aimDir=-1;}
+      if(aimAngle<-0.95){aimAngle=-0.95;aimDir=1;}
+    } else if(state===ST.POWER){ // 힘 게이지 자동 차오름
+      power+=powDir*sp;
+      if(power>1){power=1;powDir=-1;}
+      if(power<0.05){power=0.05;powDir=1;}
+    } else if(state===ST.DELIVER){
+      deliver.t+=0.05;
+      if(deliver.t>=1) finishDeliver();
+    } else if(state===ST.SLIDE){ physics(); }
+    draw();
+    requestAnimationFrame(update);
+  }
+
+  function bindOpts(rowId,key){
+    document.querySelectorAll('#'+rowId+' .opt-btn').forEach(b=>{
+      b.addEventListener('click',()=>{
+        document.querySelectorAll('#'+rowId+' .opt-btn').forEach(x=>x.classList.remove('sel'));
+        b.classList.add('sel'); cfg[key]=parseInt(b.dataset[key]);
+      });
+    });
+  }
+  bindOpts('playersRow','players');
+  function startGame(){
+    ensureAudio();
+    document.getElementById('overlay').style.display='none';
+    document.getElementById('result').style.display='none';
+    scoreYou=0; scoreAI=0; endNow=1; firstThrower='you';
+    document.getElementById('scoreYou').textContent='0';
+    document.getElementById('scoreAI').textContent='0';
+    document.getElementById('endNow').textContent='1';
+    document.getElementById('endMax').textContent=END_MAX;
+    document.getElementById('labelYou').textContent=ownerLabel('you');
+    document.getElementById('labelAI').textContent=ownerLabel('ai');
+    speak('모두의 컬링을 시작해요. 조준선이 움직일 때 화면을 탭해 방향을 정하고, 게이지가 찰 때 다시 탭해 힘을 정해요. 가장자리를 조준하면 스톤이 휘어져 들어와요.');
+    startEnd();
+  }
+  document.getElementById('startBtn').addEventListener('click',startGame);
+  document.getElementById('startBtn2').addEventListener('click',()=>{
+    document.getElementById('overlay').style.display='flex';
+    document.getElementById('result').style.display='none';
+  });
+
+  resize();
+  update();
+})();
+</script>
+</body>
+</html>

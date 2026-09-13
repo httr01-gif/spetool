@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>편견 깨뜨리기 두더지 게임</title>
+<style>
+  :root{
+    --deep:#06370d; --deep2:#0d5b17; --green:#0b8e24; --green2:#13b83b;
+    --lime:#87f15c; --field:#78d94e; --field2:#4fb736;
+    --panel:#fafff4; --ink:#172114; --blue:#2267ff; --red:#ef3d32;
+    --yellow:#ffe53b; --shadow:rgba(0,0,0,.22); --brown:#7a4a24; --hole:#2a160e;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:#062b0d;color:var(--ink)}
+  body{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic','Noto Sans KR',system-ui,sans-serif;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+  #app{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:1.6vmin;background:
+    radial-gradient(circle at 15% 8%,rgba(135,241,92,.36),transparent 22%),
+    radial-gradient(circle at 85% 15%,rgba(255,229,59,.18),transparent 20%),
+    linear-gradient(135deg,#06250a 0%,#0a4513 52%,#031b06 100%)}
+  #app:before{content:"";position:absolute;inset:0;opacity:.33;background-image:
+    linear-gradient(90deg,rgba(129,255,116,.16) 1px,transparent 1px),
+    linear-gradient(0deg,rgba(129,255,116,.10) 1px,transparent 1px);background-size:7vmin 7vmin;mask-image:radial-gradient(circle,#000 0%,transparent 75%)}
+  .screen{position:relative;width:min(96vw,177vh);aspect-ratio:16/9;border-radius:3vmin;background:linear-gradient(180deg,#78dfff 0 31%,#65cf45 31% 100%);border:.7vmin solid #dbffd3;box-shadow:0 0 0 .5vmin #2fb43e,0 1.8vmin 5vmin rgba(0,0,0,.45);overflow:hidden}
+  .screen:before{content:"";position:absolute;left:-3%;right:-3%;bottom:-12%;height:57%;background:
+    radial-gradient(ellipse at 15% 70%,rgba(255,255,255,.13),transparent 25%),
+    radial-gradient(ellipse at 80% 35%,rgba(255,255,255,.10),transparent 25%),
+    linear-gradient(180deg,var(--field) 0%,var(--field2) 100%);border-top:.5vmin solid rgba(10,122,32,.4)}
+  .sky-cloud{position:absolute;background:#fff;border-radius:99vmin;opacity:.85;filter:drop-shadow(0 .25vmin 0 rgba(0,0,0,.05))}
+  .sky-cloud:before,.sky-cloud:after{content:"";position:absolute;background:#fff;border-radius:50%}.c1{width:16vmin;height:4.4vmin;left:8%;top:17%}.c1:before{width:7vmin;height:7vmin;left:2vmin;bottom:1vmin}.c1:after{width:8vmin;height:8vmin;right:2vmin;bottom:0}.c2{width:12vmin;height:3.6vmin;right:9%;top:22%}.c2:before{width:6vmin;height:6vmin;left:2vmin;bottom:.6vmin}.c2:after{width:6vmin;height:6vmin;right:1.5vmin;bottom:.2vmin}
+  .top{position:absolute;left:2.4%;right:2.4%;top:2.2%;display:flex;align-items:center;justify-content:space-between;gap:1.4vmin;z-index:5}.brand{display:flex;align-items:center;gap:1.2vmin}.game-num{width:9vmin;height:9vmin;border-radius:2vmin;background:linear-gradient(180deg,#44d743,#08761b);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:1000;font-size:5.5vmin;text-shadow:0 .35vmin 0 rgba(0,0,0,.3);box-shadow:inset 0 .5vmin .6vmin rgba(255,255,255,.4),0 .7vmin 0 #075b15}.title{font-size:4.4vmin;font-weight:1000;letter-spacing:-.06em;color:#064a12;text-shadow:.15vmin .15vmin 0 #fff,0 .35vmin 0 rgba(0,0,0,.15);white-space:nowrap}.hud{display:flex;gap:1vmin}.stat{background:rgba(255,255,255,.96);border:.35vmin solid #1fa531;border-radius:2.2vmin;padding:.8vmin 2.2vmin;min-width:12vmin;text-align:center;box-shadow:0 .55vmin 0 rgba(0,0,0,.16)}.stat small{display:block;font-weight:900;color:#47604a;font-size:1.55vmin}.stat b{display:block;font-size:3.2vmin;color:#08761b;line-height:1.05}.stat.time b{color:#0f4e92}.stat.score b{color:#111}
+  .question{position:absolute;left:50%;top:14.5%;transform:translateX(-50%);width:min(78vmin,72%);min-height:11vmin;background:#fff;border:.42vmin solid #168f25;border-radius:3vmin;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;z-index:4;box-shadow:0 .7vmin 0 rgba(0,0,0,.12)}.question:after{content:"";position:absolute;right:16%;bottom:-2vmin;width:3.4vmin;height:3.4vmin;background:#fff;border-right:.42vmin solid #168f25;border-bottom:.42vmin solid #168f25;transform:rotate(45deg)}.q-label{font-size:2.2vmin;font-weight:1000;color:#08761b}.q-text{font-size:3.1vmin;font-weight:950;line-height:1.18;letter-spacing:-.035em;word-break:keep-all}
+  .choices{position:absolute;left:5.2%;right:5.2%;bottom:17%;height:47%;display:grid;grid-template-columns:1fr 1fr;gap:7vmin;z-index:3}.choice{position:relative;display:flex;align-items:flex-end;justify-content:center;cursor:pointer;outline:none}.choice.disabled{pointer-events:none}.bubble{position:absolute;top:0;left:50%;transform:translateX(-50%);width:92%;min-height:13vmin;background:#fff;border:.35vmin solid #238c32;border-radius:2.3vmin;padding:1.9vmin 2.3vmin;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2.85vmin;font-weight:950;line-height:1.18;letter-spacing:-.035em;word-break:keep-all;box-shadow:0 .7vmin 0 rgba(0,0,0,.12);z-index:4}.bubble:after{content:"";position:absolute;left:48%;bottom:-1.8vmin;width:3vmin;height:3vmin;background:#fff;border-right:.35vmin solid #238c32;border-bottom:.35vmin solid #238c32;transform:rotate(45deg)}
+  .bubble.long{font-size:2.45vmin;padding:1.6vmin 2vmin}
+  .hole{position:absolute;bottom:2.5vmin;width:32vmin;height:11.5vmin;border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#5c341a 0%,#271207 64%,#120805 100%);box-shadow:inset 0 1.4vmin 1.6vmin rgba(0,0,0,.6),0 .7vmin 0 rgba(0,0,0,.2);z-index:1}.mole-wrap{position:absolute;bottom:2.4vmin;width:31vmin;height:28vmin;display:flex;align-items:flex-end;justify-content:center;transform:translateY(105%);transition:transform .36s cubic-bezier(.22,1.45,.35,1);z-index:2}.choice.up .mole-wrap{transform:translateY(0)}.mole{width:25vmin;height:24vmin;position:relative}.mole svg{width:100%;height:100%;filter:drop-shadow(0 .7vmin .5vmin rgba(0,0,0,.26))}
+  .mark{position:absolute;top:33%;width:7.6vmin;height:7.6vmin;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:5.6vmin;font-weight:1000;color:#fff;border:.6vmin solid #fff;box-shadow:0 .5vmin 0 rgba(0,0,0,.22);z-index:6;opacity:.95}.left .mark{left:9%}.right .mark{right:9%}.mark.wait{background:#54a5ff}.mark.wait:before{content:"?"}.mark.ok{background:var(--blue)}.mark.ok:before{content:"O"}.mark.no{background:var(--red)}.mark.no:before{content:"×"}.choice.correct-flash .bubble{background:#eaffef;border-color:#168f25;color:#075b15}.choice.wrong-flash .bubble{background:#fff1f1;border-color:#d9372e;color:#6e1712}.choice.correct-flash .mole,.choice.wrong-flash .mole{animation:bounce .45s ease both}@keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-2vmin)}}
+  .bottom{position:absolute;left:2.4%;right:2.4%;bottom:2.3%;z-index:6;background:linear-gradient(180deg,#0c8e20,#066817);border:.45vmin solid #baff93;border-radius:2.5vmin;min-height:11.6vmin;display:flex;align-items:center;justify-content:center;gap:1.8vmin;box-shadow:0 0 2vmin rgba(73,255,82,.35),0 .8vmin 0 rgba(0,0,0,.28)}.hand{font-size:5.6vmin;filter:drop-shadow(0 .3vmin 0 rgba(0,0,0,.25))}.guide{font-size:4.15vmin;font-weight:1000;line-height:1.08;color:#fff;text-align:center;text-shadow:0 .3vmin 0 rgba(0,0,0,.35);letter-spacing:-.05em}.guide .yellow{color:#fff338}.guide .blue{color:#85c9ff}.guide .red{color:#ff8079}
+  .grass{position:absolute;z-index:2;width:5vmin;height:2.5vmin;bottom:24%;left:18%;opacity:.7;background:repeating-linear-gradient(115deg,transparent 0 1vmin,#249823 1vmin 1.25vmin,transparent 1.25vmin 2vmin)}.g2{left:78%;bottom:33%;transform:scale(1.3)}.g3{left:48%;bottom:26%;transform:scale(.9)}
+  .overlay{position:absolute;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:4vmin;background:rgba(0,25,6,.58);backdrop-filter:blur(.35vmin)}.overlay.hide{display:none}.card{background:rgba(255,255,255,.96);border:.55vmin solid #baff93;border-radius:4vmin;box-shadow:0 1.4vmin 0 rgba(0,0,0,.25),0 0 3vmin rgba(84,255,84,.28);padding:4.5vmin 5vmin;text-align:center;max-width:90%;animation:pop .35s ease both}.card h1{font-size:7.3vmin;line-height:1.05;color:#08761b;font-weight:1000;letter-spacing:-.06em;text-shadow:0 .25vmin 0 #bff7c0}.card p{margin-top:1.6vmin;font-size:2.8vmin;font-weight:850;line-height:1.45;word-break:keep-all}.btn{border:none;border-radius:3vmin;background:linear-gradient(180deg,#ffdf38,#ff9d00);color:#2b2100;font-family:inherit;font-size:4.2vmin;font-weight:1000;padding:1.8vmin 6vmin;margin-top:3vmin;box-shadow:0 .85vmin 0 #b96b00;cursor:pointer}.btn:active{transform:translateY(.5vmin);box-shadow:0 .35vmin 0 #b96b00}.btn-row{display:flex;gap:2vmin;justify-content:center;flex-wrap:wrap}.success-list{display:grid;grid-template-columns:1fr 1fr;gap:1vmin;margin-top:2.4vmin;text-align:left}.success-list div{font-size:1.9vmin;font-weight:850;background:#eaffef;border-radius:1.4vmin;padding:1vmin 1.3vmin;color:#096a19}.success-list div.bad{background:#ffecec;color:#a02020}.feedback{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:15;font-size:8vmin;font-weight:1000;color:#fff;text-shadow:0 .55vmin 0 rgba(0,0,0,.35);opacity:0;pointer-events:none}.feedback.show{animation:fb .8s ease both}@keyframes fb{0%{transform:translate(-50%,-50%) scale(.4);opacity:0}25%{transform:translate(-50%,-55%) scale(1.12);opacity:1}80%{opacity:1}100%{transform:translate(-50%,-70%) scale(1);opacity:0}}@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+  .explain{position:absolute;left:50%;bottom:16.5%;transform:translateX(-50%);z-index:14;background:#fff6f5;border:.45vmin solid #d9372e;border-radius:2.2vmin;padding:1.3vmin 2.6vmin;font-size:2.7vmin;font-weight:950;line-height:1.3;color:#8f1d15;box-shadow:0 .6vmin 0 rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .25s;max-width:82%;text-align:center;word-break:keep-all}.explain.show{opacity:1}.explain b{color:#0b6e1c}
+  .corner{position:absolute;right:2vmin;top:12vmin;z-index:12;display:flex;gap:1vmin}.icon{border:none;width:6.8vmin;height:6.8vmin;border-radius:50%;background:#fff;box-shadow:0 .45vmin 0 rgba(0,0,0,.2);font-size:3.2vmin;cursor:pointer}.countdown{position:absolute;inset:0;z-index:30;display:none;align-items:center;justify-content:center;background:rgba(0,50,10,.38)}.countdown.show{display:flex}.countdown b{font-size:24vmin;color:#fff;text-shadow:0 .9vmin 0 #08761b,0 0 5vmin rgba(0,0,0,.4);animation:cd .8s ease both}@keyframes cd{from{transform:scale(.5);opacity:0}50%{opacity:1}to{transform:scale(1.2);opacity:0}}
+  @media (max-aspect-ratio:4/3){.screen{width:100vw;height:100vh;border-radius:0;border:0}.title{font-size:3.8vmin}.choices{gap:3vmin}.bubble{font-size:2.5vmin}.guide{font-size:3.6vmin}}
+</style>
+</head>
+<body>
+<div id="app">
+  <main class="screen" id="gameScreen">
+    <div class="sky-cloud c1"></div><div class="sky-cloud c2"></div><div class="grass"></div><div class="grass g2"></div><div class="grass g3"></div>
+    <section class="top">
+      <div class="brand"><div class="game-num">3</div><div class="title">편견 깨뜨리기 두더지 게임</div></div>
+      <div class="hud">
+        <div class="stat time"><small>남은 문제</small><b id="remain">10</b></div>
+        <div class="stat score"><small>점수</small><b id="score">0</b></div>
+        <div class="stat"><small>정답</small><b><span id="correct">0</span> / 10</b></div>
+      </div>
+    </section>
+    <section class="question"><div class="q-label" id="qLabel">문제</div><div class="q-text" id="qText">맞다고 생각하는 내용을 말한 두더지를 선택하세요!</div></section>
+    <section class="choices">
+      <button class="choice left" id="leftChoice" data-side="left" aria-label="왼쪽 두더지 선택">
+        <div class="bubble"></div><div class="mark wait"></div><div class="hole"></div><div class="mole-wrap"><div class="mole"></div></div>
+      </button>
+      <button class="choice right" id="rightChoice" data-side="right" aria-label="오른쪽 두더지 선택">
+        <div class="bubble"></div><div class="mark wait"></div><div class="hole"></div><div class="mole-wrap"><div class="mole"></div></div>
+      </button>
+    </section>
+    <section class="bottom"><div class="hand">👆</div><div class="guide">문제를 읽고 <span class="yellow">옳은 말을 한 두더지</span>를 터치하세요!</div></section>
+    <div class="feedback" id="feedback">정답!</div>
+    <div class="explain" id="explain"></div>
+    <div class="corner"><button class="icon" id="muteBtn" title="소리">🔊</button><button class="icon" id="fsBtn" title="전체화면">⛶</button></div>
+    <div class="countdown" id="countdown"><b id="cdText">3</b></div>
+    <div class="overlay" id="startOverlay">
+      <div class="card">
+        <h1>편견 깨뜨리기<br>두더지 게임</h1>
+        <p>장애이해 · 인식개선 · 인권 · 통합교육<br><b style="color:#08761b">47문제</b> 중 무작위로 <b style="color:#08761b">10문제</b>가 나와요.<br>문제를 읽고 <b style="color:#08761b">옳은 말을 한 두더지</b>를 터치!<br>10문제를 다 풀면 최종 점수를 알려줘요!</p>
+        <button class="btn" id="startBtn">시작하기</button>
+      </div>
+    </div>
+    <div class="overlay hide" id="endOverlay">
+      <div class="card">
+        <h1 id="endTitle">성공! 🎉</h1>
+        <p id="endMsg">정답 10개를 모두 맞혔어요.<br>편견 없이 읽고, 정확하게 선택했어요!</p>
+        <div class="success-list" id="successList"></div>
+        <div class="btn-row"><button class="btn" id="againBtn">다시 하기</button></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+'use strict';
+const GOAL=10;
+const QUESTIONS=[
+  // Ⅰ. 장애 이해 (1~11)
+  {cat:'장애 이해', q:'장애는 왜 생길까요?', right:'대부분 질병·사고 등 후천적으로 생긴다', wrong:'대부분 태어날 때부터 갖고 태어난다'},
+  {cat:'장애 이해', q:'장애인의 날은 언제일까요?', right:'4월 20일', wrong:'5월 8일'},
+  {cat:'장애 이해', q:'시각장애인에 대한 옳은 설명은?', right:'남은 시력을 쓰는 저시력인이 더 많다', wrong:'모두 아무것도 전혀 볼 수 없다'},
+  {cat:'장애 이해', q:'청각장애인의 의사소통 방법은?', right:'수어·구화·필담 등 사람마다 다양하다', wrong:'모두 수어만 사용한다'},
+  {cat:'장애 이해', q:'한국수어는 어떤 언어일까요?', right:'국어와 동등한 공식 언어이다', wrong:'단순한 손짓·몸짓일 뿐이다'},
+  {cat:'장애 이해', q:'한글 점자 훈맹정음을 만든 사람은?', right:'박두성 선생', wrong:'세종대왕'},
+  {cat:'장애 이해', q:'자폐성장애인에 대한 옳은 설명은?', right:'특성과 능력이 사람마다 다양하다', wrong:'모두 천재적인 특별한 능력이 있다'},
+  {cat:'장애 이해', q:'뇌병변장애란 무엇일까요?', right:'뇌 손상으로 인한 신체적 장애이다', wrong:'지능이 낮다는 뜻이다'},
+  {cat:'장애 이해', q:'정신장애에 대한 옳은 설명은?', right:'치료와 지원이 필요한 건강 문제이다', wrong:'의지가 약해서 생기는 것이다'},
+  {cat:'장애 이해', q:'일하는 중인 안내견을 만나면?', right:'만지거나 먹이를 주지 않는다', wrong:'귀여우니 쓰다듬어도 된다'},
+  {cat:'장애 이해', q:'신장·심장장애처럼 안 보이는 장애는?', right:'법이 정한 장애 유형에 포함된다', wrong:'눈에 안 보이면 장애가 아니다'},
+  // Ⅱ. 올바른 표현과 에티켓 (12~25)
+  {cat:'올바른 표현', q:'올바른 표현은 무엇일까요?', right:"'장애인'이라고 부른다", wrong:"'장애자·장애우'라고 부른다"},
+  {cat:'올바른 표현', q:"'장애인'의 반대말은?", right:'비장애인', wrong:'정상인·일반인'},
+  {cat:'올바른 표현', q:'올바른 표현은 무엇일까요?', right:'시각장애인·청각장애인', wrong:'장님·귀머거리'},
+  {cat:'에티켓', q:'장애인을 돕고 싶을 때는?', right:'먼저 물어보고 원하는 방식으로 돕는다', wrong:'묻지 않고 무조건 바로 도와준다'},
+  {cat:'에티켓', q:'휠체어 이용자와 오래 대화할 때는?', right:'눈높이를 맞추고 이야기한다', wrong:'서서 내려다보며 이야기한다'},
+  {cat:'에티켓', q:'시각장애인의 보행을 안내할 때는?', right:'내 팔을 잡게 하고 반 보 앞에서 걷는다', wrong:'등을 밀거나 팔을 잡아끈다'},
+  {cat:'에티켓', q:'청각장애인과 대화할 때는?', right:'정면에서 입 모양이 보이게 말한다', wrong:'뒤에서 큰 소리로 반복해 말한다'},
+  {cat:'에티켓', q:'성인 발달장애인을 대할 때는?', right:'존중하며 쉬운 말로 설명한다', wrong:'아이 대하듯 반말을 쓴다'},
+  {cat:'에티켓', q:'언어장애가 있는 사람과 대화할 때는?', right:'말을 끝까지 기다리며 듣는다', wrong:'답답하면 말을 대신 끝내준다'},
+  {cat:'에티켓', q:'휠체어를 대하는 바른 태도는?', right:'동의 없이 밀거나 만지지 않는다', wrong:'보이면 그냥 밀어주면 된다'},
+  {cat:'에티켓', q:'시각장애인에게 위치를 알려줄 때는?', right:"'오른쪽 세 걸음'처럼 구체적으로", wrong:"손짓하며 '저기요, 이쪽이요'"},
+  {cat:'올바른 표현', q:'더 바람직한 표현은?', right:"'휠체어를 이용하는'", wrong:"'휠체어에 갇힌'"},
+  {cat:'올바른 표현', q:'장애인을 바라보는 바른 관점은?', right:'동등한 권리를 가진 사회 구성원', wrong:'무조건 동정해야 할 대상'},
+  {cat:'에티켓', q:'흰지팡이·목발 등 보조기기는?', right:'허락 없이 만지거나 치우지 않는다', wrong:'방해되면 말없이 옮겨 놓는다'},
+  // Ⅲ. 장애인권과 제도 (26~38)
+  {cat:'장애인권·제도', q:'장애인 차별을 금지하는 법은?', right:'장애인차별금지법이 시행 중이다', wrong:'우리나라에는 아직 없다'},
+  {cat:'장애인권·제도', q:'유엔 장애인권리협약은?', right:'우리나라도 비준해 지킬 의무가 있다', wrong:'우리나라는 가입하지 않았다'},
+  {cat:'장애인권·제도', q:'장애인전용주차구역에는?', right:'표지를 붙인 차량만 주차할 수 있다', wrong:'잠깐이면 누구나 주차해도 된다'},
+  {cat:'장애인권·제도', q:'장애 등급 제도는 지금 어떨까요?', right:"폐지되고 '장애 정도'로 구분한다", wrong:'지금도 1~6급으로 나눈다'},
+  {cat:'장애인권·제도', q:'경사로·수어통역 등 편의 제공을 거부하면?', right:'차별에 해당한다', wrong:'선의일 뿐이라 차별이 아니다'},
+  {cat:'장애인권·제도', q:'식당에서 안내견 출입을 거부하면?', right:'법에 따라 과태료가 부과될 수 있다', wrong:'가게 마음대로 거부해도 된다'},
+  {cat:'장애인권·제도', q:'직장 내 장애인식개선 교육은?', right:'연 1회 이상 법정 의무교육이다', wrong:'원하는 회사만 하면 된다'},
+  {cat:'장애인권·제도', q:'장애인 고용에 대한 옳은 설명은?', right:'일정 규모 이상 기업의 법적 의무다', wrong:'기업의 선택 사항일 뿐이다'},
+  {cat:'장애인권·제도', q:'유니버설 디자인이란?', right:'모두가 편리하게 쓰는 디자인', wrong:'장애인만 쓰는 특수 디자인'},
+  {cat:'장애인권·제도', q:'배리어프리란 무엇일까요?', right:'생활 속 장벽을 없애는 것', wrong:'비장애인에게 불편을 주는 것'},
+  {cat:'장애인권·제도', q:'노란 점자블록 위에는?', right:'물건·자전거를 두면 안 된다', wrong:'잠깐은 세워 둬도 괜찮다'},
+  {cat:'장애인권·제도', q:'저상버스는 왜 있을까요?', right:'교통약자의 이동권을 위해서', wrong:'디자인을 위해 낮게 만든 것'},
+  {cat:'장애인권·제도', q:'장애인의 투표(참정권)는?', right:'편의를 제공받으며 동등하게 행사한다', wrong:'어려우면 포기하는 게 자연스럽다'},
+  // Ⅳ. 통합교육과 장애공감 (39~47)
+  {cat:'통합교육', q:'통합교육이란 무엇일까요?', right:'또래와 함께 차별 없이 배우는 것', wrong:'따로 분리해서 가르치는 것'},
+  {cat:'통합교육', q:'통합교육의 효과는?', right:'비장애학생에게도 긍정적이다', wrong:'장애학생에게만 도움이 된다'},
+  {cat:'통합교육', q:'통합학급에서 장애학생을 대할 때는?', right:'필요할 때 물어보고 돕는다', wrong:'모든 일을 무조건 대신해 준다'},
+  {cat:'통합교육', q:'장애학생을 놀리는 것을 봤다면?', right:'말리고 선생님께 알린다', wrong:'상관없으니 모른 척한다'},
+  {cat:'통합교육', q:'개별화교육계획(IEP)이란?', right:'학생 개개인에 맞춘 교육 계획', wrong:'모두 똑같이 가르치는 계획'},
+  {cat:'통합교육', q:'특수학급은 어디에 있을까요?', right:'일반학교 안에도 설치된다', wrong:'특수학교 안에만 있다'},
+  {cat:'통합교육', q:'장애가 있는 친구와 같은 반이 되면?', right:'똑같이 인사하고 어울린다', wrong:'부담스러우니 피한다'},
+  {cat:'통합교육', q:'통합교육이 지향하는 것은?', right:'서로 존중하며 함께 성장하는 것', wrong:'장애학생만 맞추고 적응하는 것'},
+  {cat:'통합교육', q:'장애인식개선(장애공감) 교육은?', right:'편견을 줄이는 데 도움이 된다', wrong:'오히려 차별을 심하게 만든다'}
+];
+const left=document.getElementById('leftChoice'), right=document.getElementById('rightChoice');
+const choices={left,right};
+const scoreEl=document.getElementById('score'), correctEl=document.getElementById('correct'), remainEl=document.getElementById('remain');
+const startOverlay=document.getElementById('startOverlay'), endOverlay=document.getElementById('endOverlay'), successList=document.getElementById('successList');
+const feedback=document.getElementById('feedback'), cd=document.getElementById('countdown'), cdText=document.getElementById('cdText');
+const qLabel=document.getElementById('qLabel'), qText=document.getElementById('qText');
+const explain=document.getElementById('explain'), endTitle=document.getElementById('endTitle'), endMsg=document.getElementById('endMsg');
+let deck=[], current=null, correctSide='left', locked=true, score=0, correct=0, answered=0, results=[];
+let muted=false, actx=null, gain=null;
+function moleSvg(){return `<svg viewBox="0 0 120 110" aria-hidden="true">
+  <ellipse cx="60" cy="78" rx="41" ry="32" fill="#7b4a2d"/>
+  <circle cx="33" cy="50" r="13" fill="#744329"/><circle cx="87" cy="50" r="13" fill="#744329"/>
+  <ellipse cx="60" cy="67" rx="35" ry="38" fill="#8b5432"/>
+  <ellipse cx="60" cy="78" rx="26" ry="23" fill="#f6d7b5"/>
+  <circle cx="45" cy="59" r="4.5" fill="#16120f"/><circle cx="75" cy="59" r="4.5" fill="#16120f"/>
+  <circle cx="43" cy="57" r="1.5" fill="#fff"/><circle cx="73" cy="57" r="1.5" fill="#fff"/>
+  <ellipse cx="60" cy="69" rx="9" ry="7" fill="#c62821"/><ellipse cx="57" cy="66" rx="3" ry="2" fill="#ff9d93"/>
+  <path d="M49 82 Q60 93 71 82" stroke="#6b2f1d" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M56 86 L56 91 M64 86 L64 91" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
+  <ellipse cx="31" cy="100" rx="12" ry="7" fill="#744329"/><ellipse cx="89" cy="100" rx="12" ry="7" fill="#744329"/>
+  <circle cx="37" cy="74" r="4" fill="#ef9d88" opacity=".8"/><circle cx="83" cy="74" r="4" fill="#ef9d88" opacity=".8"/>
+</svg>`}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function resetDeck(){deck=shuffle([...QUESTIONS])}
+function setHud(){scoreEl.textContent=score;correctEl.textContent=correct;remainEl.textContent=Math.max(0,GOAL-answered)}
+function initAudio(){if(actx)return;try{actx=new(window.AudioContext||window.webkitAudioContext)();gain=actx.createGain();gain.gain.value=.55;gain.connect(actx.destination)}catch(e){}}
+function tone(f,d,type='sine',vol=.18,delay=0){if(!actx||muted)return;const t=actx.currentTime+delay;const o=actx.createOscillator();const g=actx.createGain();o.type=type;o.frequency.value=f;g.gain.setValueAtTime(.001,t);g.gain.exponentialRampToValueAtTime(vol,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+d);o.connect(g);g.connect(gain);o.start(t);o.stop(t+d+.03)}
+function sPop(){tone(520,.12,'triangle',.15);tone(780,.12,'triangle',.10,.05)}
+function sOk(){[660,880,1174].forEach((f,i)=>tone(f,.16,'triangle',.22,i*.06))}
+function sBad(){tone(220,.22,'sawtooth',.18);tone(160,.22,'sawtooth',.12,.08)}
+function sWin(){[523,659,784,1046,1318].forEach((f,i)=>tone(f,.2,'triangle',.24,i*.11))}
+function vibrate(p){try{if('vibrate'in navigator&&!muted)navigator.vibrate(p)}catch(e){}}
+function showFeedback(txt, ok){feedback.textContent=txt;feedback.style.color=ok?'#fff338':'#ff8b86';feedback.classList.remove('show');void feedback.offsetWidth;feedback.classList.add('show')}
+function prepareChoices(){Object.values(choices).forEach(el=>{el.classList.remove('up','disabled','correct-flash','wrong-flash');el.querySelector('.mark').className='mark wait';el.querySelector('.mole').innerHTML=moleSvg();});}
+function setBubble(el,text){el.textContent=text;el.classList.toggle('long',text.length>18)}
+function nextRound(){if(answered>=GOAL){finish();return} if(deck.length===0)resetDeck(); current=deck.shift(); correctSide=Math.random()<.5?'left':'right'; const wrongSide=correctSide==='left'?'right':'left'; prepareChoices(); explain.classList.remove('show'); qLabel.textContent='문제 '+(answered+1)+'/'+GOAL+' · '+current.cat; qText.textContent=current.q; setBubble(choices[correctSide].querySelector('.bubble'),current.right); setBubble(choices[wrongSide].querySelector('.bubble'),current.wrong); locked=true; setTimeout(()=>{left.classList.add('up');right.classList.add('up');sPop();locked=false},180)}
+function choose(side){if(locked||!current)return;locked=true;left.classList.add('disabled');right.classList.add('disabled');const picked=choices[side];const other=choices[side==='left'?'right':'left'];const isCorrect=side===correctSide;answered++;results.push({text:current.right,ok:isCorrect});let wait=1250;if(isCorrect){score+=10;correct++;picked.classList.add('correct-flash');picked.querySelector('.mark').className='mark ok';other.querySelector('.mark').className='mark no';showFeedback('정답!',true);sOk();vibrate(30)}else{score=Math.max(0,score-5);picked.classList.add('wrong-flash');picked.querySelector('.mark').className='mark no';other.classList.add('correct-flash');other.querySelector('.mark').className='mark ok';showFeedback('오답!',false);explain.innerHTML='❌ 아쉬워요! 정답은 <b>“'+current.right+'”</b> 입니다';explain.classList.add('show');wait=2600;sBad();vibrate([25,20,25])}setHud();setTimeout(()=>{left.classList.remove('up');right.classList.remove('up')},isCorrect?900:2200);setTimeout(nextRound,wait)}
+function countdown(){cd.classList.add('show');let n=3;cdText.textContent=n;const iv=setInterval(()=>{n--;if(n>0){cdText.textContent=n;cdText.style.animation='none';void cdText.offsetWidth;cdText.style.animation='cd .8s ease both';tone(900,.07,'square',.15);vibrate(10)}else{clearInterval(iv);cdText.textContent='시작!';cdText.style.animation='none';void cdText.offsetWidth;cdText.style.animation='cd .8s ease both';setTimeout(()=>{cd.classList.remove('show');nextRound()},650)}},850)}
+function start(){initAudio();if(actx&&actx.state==='suspended')actx.resume();score=0;correct=0;answered=0;results=[];current=null;resetDeck();setHud();explain.classList.remove('show');qLabel.textContent='문제';qText.textContent='맞다고 생각하는 내용을 말한 두더지를 선택하세요!';endOverlay.classList.add('hide');startOverlay.classList.add('hide');countdown()}
+function finish(){current=null;locked=true;left.classList.remove('up');right.classList.remove('up');explain.classList.remove('show');
+  if(correct===GOAL){endTitle.textContent='만점! 🎉';sWin()}else if(correct>=7){endTitle.textContent='잘했어요! 👏';sWin()}else if(correct>=4){endTitle.textContent='조금만 더! 💪';sOk()}else{endTitle.textContent='다시 도전! 🌱';sOk()}
+  vibrate([60,30,60,30,120]);
+  endMsg.innerHTML='10문제 중 <b style="color:#08761b;font-size:4vmin">'+correct+'개</b> 를 맞혔어요!<br>최종 점수는 <b style="color:#0f4e92;font-size:4vmin">'+score+'점</b> 입니다.';
+  successList.innerHTML=results.map(r=>r.ok?`<div>✓ ${r.text}</div>`:`<div class="bad">✗ 정답: ${r.text}</div>`).join('');
+  endOverlay.classList.remove('hide')}
+left.addEventListener('pointerdown',e=>{e.preventDefault();choose('left')},{passive:false});right.addEventListener('pointerdown',e=>{e.preventDefault();choose('right')},{passive:false});
+document.getElementById('startBtn').addEventListener('click',start);document.getElementById('againBtn').addEventListener('click',start);
+document.getElementById('muteBtn').addEventListener('click',e=>{muted=!muted;e.currentTarget.textContent=muted?'🔇':'🔊';if(muted&&'vibrate'in navigator)navigator.vibrate(0)});
+document.getElementById('fsBtn').addEventListener('click',()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen?.();else document.exitFullscreen?.()});
+setHud();prepareChoices();
+document.addEventListener('gesturestart',e=>e.preventDefault());document.addEventListener('touchmove',e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+</script>
+</body>
+</html>

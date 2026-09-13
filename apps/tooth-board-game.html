@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>이빨 건강 지키기</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,sans-serif;font-weight:800;
+ background:linear-gradient(160deg,#bfe9ff 0%,#e8f7ff 45%,#fff6e6 100%);color:#16324f;
+ min-height:100vh;overflow-x:hidden}
+button{font-family:inherit;font-weight:800;cursor:pointer;border:none;border-radius:18px;
+ font-size:20px;padding:14px 22px;transition:transform .12s,box-shadow .12s;
+ box-shadow:0 4px 0 rgba(0,0,0,.15)}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.15)}
+.big{font-size:24px}
+.pri{background:#ff7aa2;color:#fff}
+.go{background:#36c98e;color:#fff}
+.blue{background:#3aa0ff;color:#fff}
+.warn{background:#ff9f43;color:#fff}
+.ghost{background:#fff;color:#16324f;box-shadow:0 3px 0 #cfe3f2}
+input,select{font-family:inherit;font-weight:800;font-size:20px;padding:12px 14px;border-radius:14px;
+ border:3px solid #bcd9ef;outline:none;color:#16324f}
+input:focus,select:focus{border-color:#3aa0ff}
+
+/* screens */
+.screen{display:none;min-height:100vh;padding:20px}
+.screen.on{display:block}
+.center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px}
+
+/* setup */
+.card{background:#fff;border-radius:26px;padding:26px;max-width:680px;width:100%;
+ box-shadow:0 12px 30px rgba(40,90,140,.18);border:4px solid #ffffff}
+.title{font-size:40px;color:#ff6090;text-align:center;text-shadow:2px 2px 0 #fff}
+.sub{font-size:20px;text-align:center;color:#3a6d96;margin-top:4px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+.label{font-size:20px;color:#2c587c;min-width:96px}
+.chip{padding:10px 16px;border-radius:14px;background:#eaf5ff;color:#2c587c;border:3px solid #d4e9fb}
+.chip.sel{background:#3aa0ff;color:#fff;border-color:#3aa0ff}
+.namegrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.namegrid .ni{display:flex;align-items:center;gap:8px;background:#f4fbff;padding:8px;border-radius:14px}
+.namegrid .ni span{font-size:30px}
+.namegrid .ni input{flex:1;min-width:0}
+
+/* enter */
+#enterStage{min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+.enterCard{background:#fff;border-radius:30px;padding:30px 44px;font-size:40px;box-shadow:0 12px 30px rgba(40,90,140,.2);
+ display:flex;align-items:center;gap:18px;animation:slideIn .5s ease}
+@keyframes slideIn{from{opacity:0;transform:translateX(-90px) scale(.8)}to{opacity:1;transform:none}}
+
+/* game layout */
+#game{display:none;grid-template-columns:1fr 320px;gap:16px;padding:14px;align-items:start}
+#game.on{display:grid}
+.boardWrap{display:flex;align-items:center;justify-content:center}
+#board{position:relative;width:min(82vh,760px);aspect-ratio:1/1;background:#dff1ff;border-radius:20px;
+ box-shadow:inset 0 0 0 5px #fff,0 8px 24px rgba(40,90,140,.18)}
+.cell{position:absolute;border-radius:12px;border:3px solid rgba(255,255,255,.85);
+ display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;
+ box-shadow:0 2px 6px rgba(0,0,0,.08)}
+.cell .ce{font-size:min(3.2vh,30px);line-height:1}
+.cell .cn{position:absolute;top:2px;left:5px;font-size:11px;color:rgba(0,0,0,.45)}
+.cell.corner{box-shadow:0 4px 10px rgba(0,0,0,.18);border-width:4px}
+.tok{position:absolute;font-size:24px;transition:left .25s,top .25s;z-index:5;
+ filter:drop-shadow(0 2px 2px rgba(0,0,0,.3));pointer-events:none}
+#centerInfo{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:62%;text-align:center}
+#centerInfo .ct{font-size:min(4.4vh,34px);color:#ff6090;text-shadow:1px 1px 0 #fff}
+#turnInfo{font-size:min(2.6vh,22px);color:#2c587c;margin-top:8px}
+#curPlayer{font-size:min(3.4vh,28px);margin-top:6px}
+
+/* sidebar */
+.side{background:#fff;border-radius:20px;padding:16px;box-shadow:0 8px 24px rgba(40,90,140,.14);
+ display:flex;flex-direction:column;gap:12px}
+.scoreList{display:flex;flex-direction:column;gap:8px;max-height:42vh;overflow:auto}
+.pl{display:flex;align-items:center;gap:8px;background:#f4fbff;border-radius:14px;padding:8px 10px;font-size:19px}
+.pl.act{background:#fff2cc;box-shadow:0 0 0 3px #ffd24d inset}
+.pl .av{font-size:26px}
+.pl .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl .sc{font-size:22px;color:#ff6090}
+.pl .cb{font-size:14px;color:#ff8a00}
+.rk{font-size:15px;color:#9bb6cb;min-width:20px}
+
+/* dice area */
+.diceBox{background:#eef8ff;border-radius:16px;padding:12px;text-align:center}
+#diceFace{font-size:64px;height:74px;line-height:74px}
+.spin{animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gauge{height:18px;border-radius:10px;background:#dde9f2;overflow:hidden;margin:8px 0}
+.gauge>div{height:100%;width:0;background:#36c98e;transition:width .08s}
+.microw{display:flex;align-items:center;gap:8px;font-size:15px;color:#3a6d96}
+input[type=range]{width:100%}
+
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(20,50,80,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal.on{display:flex}
+.box{background:#fff;border-radius:26px;max-width:640px;width:100%;overflow:hidden;
+ box-shadow:0 20px 50px rgba(0,0,0,.3);animation:pop .3s ease}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+.bhead{padding:16px 20px;font-size:26px;color:#fff;display:flex;align-items:center;gap:10px}
+.bbody{padding:22px;text-align:center}
+.qtext{font-size:26px;line-height:1.4;margin:6px 0 14px}
+.qemoji{font-size:96px;margin:6px 0}
+.opts{display:flex;flex-direction:column;gap:12px}
+.opt{background:#f1f8ff;color:#16324f;border:3px solid #d4e9fb;border-radius:16px;padding:16px;font-size:22px;
+ text-align:left;display:flex;gap:10px;align-items:center}
+.opt .num{background:#3aa0ff;color:#fff;border-radius:50%;width:36px;height:36px;display:flex;
+ align-items:center;justify-content:center;flex-shrink:0;font-size:20px}
+.opt.ok{background:#d6f7e6;border-color:#36c98e}
+.opt.no{background:#ffe0e0;border-color:#ff6b6b}
+.opt.ok .num{background:#36c98e}.opt.no .num{background:#ff6b6b}
+.two{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+.foodbtn{background:#fff;border:4px solid #d4e9fb;border-radius:22px;padding:18px 14px;min-width:150px;
+ display:flex;flex-direction:column;align-items:center;gap:6px;font-size:24px}
+.foodbtn .fe{font-size:84px}
+.foodbtn.ok{background:#d6f7e6;border-color:#36c98e}
+.foodbtn.no{background:#ffe0e0;border-color:#ff6b6b}
+.oxwrap{display:flex;gap:20px;justify-content:center}
+.oxbtn{border-radius:24px;padding:18px 24px;font-size:30px;border:4px solid;display:flex;
+ flex-direction:column;align-items:center;gap:6px;min-width:160px;background:#fff}
+.oxbtn .tooth{font-size:60px}
+.oxO{border-color:#36c98e;color:#1a9d6b}
+.oxX{border-color:#ff6b6b;color:#e23d3d}
+.oxbtn.ok{background:#d6f7e6}.oxbtn.no{background:#ffe0e0}
+.result{font-size:30px;margin:14px 0;min-height:40px}
+.bonus{font-size:22px;color:#ff8a00;margin-top:6px}
+.diffbtns{display:flex;flex-direction:column;gap:14px;margin-top:8px}
+.diffbtn{border-radius:20px;padding:18px;font-size:24px;color:#16324f;border:4px solid;display:flex;
+ align-items:center;gap:14px;justify-content:center;background:#fff}
+.diffbtn .st{font-size:18px;opacity:.8}
+.d1{border-color:#36c98e;background:#e8fbf2}
+.d2{border-color:#ffc83d;background:#fff8e6}
+.d3{border-color:#ff7a7a;background:#ffeaea}
+.hintbox{background:#fff8e6;border:3px dashed #ffc83d;border-radius:14px;padding:12px;margin:10px 0;
+ font-size:20px;color:#a96b00;display:none}
+.hintbox.on{display:block}
+
+/* golden card flip */
+.flip{perspective:1000px;width:200px;height:260px;margin:10px auto}
+.flipInner{position:relative;width:100%;height:100%;transition:transform .8s;transform-style:preserve-3d}
+.flipInner.done{transform:rotateY(180deg)}
+.flipFace{position:absolute;inset:0;backface-visibility:hidden;border-radius:20px;display:flex;
+ align-items:center;justify-content:center;font-size:90px;box-shadow:0 8px 20px rgba(0,0,0,.2)}
+.flipFront{background:linear-gradient(135deg,#ffd84d,#ffb300)}
+.flipBack{background:#fff;transform:rotateY(180deg);flex-direction:column;font-size:64px;padding:14px;text-align:center}
+.flipBack .bt{font-size:22px;color:#16324f;margin-top:8px}
+
+/* travel buttons */
+.travelGrid{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-top:10px;max-height:40vh;overflow:auto}
+.travelGrid button{padding:8px 0;font-size:16px;border-radius:10px;background:#eaf5ff;color:#2c587c;box-shadow:0 2px 0 #cfe3f2}
+
+/* sparkle / confetti */
+.spark{position:fixed;font-size:28px;pointer-events:none;z-index:60;animation:up 1s ease forwards}
+@keyframes up{from{opacity:1;transform:translateY(0) scale(1)}to{opacity:0;transform:translateY(-90px) scale(1.6)}}
+.confetti{position:fixed;top:-20px;font-size:22px;pointer-events:none;z-index:60}
+.rankList{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.rankItem{display:flex;align-items:center;gap:12px;background:#f4fbff;border-radius:16px;padding:12px 16px;font-size:24px}
+.medal{font-size:34px}
+@media(max-width:900px){#game.on{grid-template-columns:1fr}.side{order:-1}}
+</style>
+</head><body>
+
+<!-- ========== SETUP ========== -->
+<div id="setup" class="screen on center">
+ <div class="card">
+  <div class="title">🦷 이빨 건강 지키기 🪥</div>
+  <div class="sub">치아에 좋은 음식 · 좋지 않은 음식 알기</div>
+  <div class="row"><span class="label">👥 인원수</span>
+   <div id="numChips"></div></div>
+  <div id="nameArea" class="namegrid"></div>
+  <div class="row"><span class="label">🔁 턴 수</span>
+   <div id="turnChips"></div></div>
+  <div class="row" style="margin-top:16px;background:#fff8e6;border-radius:16px;padding:12px;font-size:18px;color:#a96b00;display:block">
+   💡 퀴즈 칸(🦷)에 도착하면 그때 <b>🟢어려움·🟡보통·🔴쉬움</b> 난이도를 직접 골라요!<br>
+   어떤 난이도든 정답이면 <b>1점 + 🎁랜덤 보너스</b>를 받아요.
+  </div>
+  <div class="center" style="margin-top:18px">
+   <button class="pri big" onclick="startEnter()">선수 입장하기 ▶</button>
+  </div>
+ </div>
+</div>
+
+<!-- ========== ENTER ========== -->
+<div id="enterScreen" class="screen center">
+ <div id="enterStage"></div>
+ <div id="enterCtrl" class="center">
+  <div style="font-size:26px;color:#2c587c">준비되었나요?</div>
+  <button class="go big" onclick="beginGame()">🎮 게임 시작!</button>
+ </div>
+</div>
+
+<!-- ========== GAME ========== -->
+<div id="game" class="screen">
+ <div class="boardWrap">
+  <div id="board">
+   <div id="centerInfo">
+    <div class="ct">🦷 이빨 건강 지키기</div>
+    <div id="curPlayer"></div>
+    <div id="turnInfo"></div>
+   </div>
+  </div>
+ </div>
+ <div class="side">
+  <div class="diceBox">
+   <div id="diceFace">🎲</div>
+   <button id="rollBtn" class="pri big" style="width:100%" onclick="rollDice()">🎲 주사위 굴리기</button>
+   <div style="margin-top:10px">
+    <button id="micBtn" class="ghost" style="width:100%;font-size:17px" onclick="toggleMic()">🎤 마이크로 굴리기 OFF</button>
+    <div class="gauge"><div id="gaugeBar"></div></div>
+    <div class="microw"><span>←예민</span><input id="thr" type="range" min="50" max="220" value="160"><span>둔감→</span></div>
+   </div>
+  </div>
+  <div class="scoreList" id="scoreList"></div>
+  <button class="warn" style="font-size:18px" onclick="askEnd()">⏹ 게임 끝내기</button>
+ </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+<div id="modal" class="modal"><div class="box">
+ <div id="mhead" class="bhead"></div>
+ <div id="mbody" class="bbody"></div>
+</div></div>
+
+<div id="result" class="screen center">
+ <div class="card">
+  <div class="title">🎉 게임 끝! 🎉</div>
+  <div id="rankList" class="rankList"></div>
+  <div class="center" style="margin-top:20px">
+   <button class="pri big" onclick="location.reload()">🔄 다시 하기</button>
+  </div>
+ </div>
+</div>
+
+<script>
+
+// ===== DATA =====
+const S1=[{"q": "🍎🥕 이 음식들은 왜 '천연 칫솔'이라고 불릴까요?", "emoji": "🍎", "opts": ["비타민이 치아 색깔을 예쁘게 해줘서", "달콤한 과즙이 충치 세균을 물리쳐서", "거친 '식이섬유'가 씹을 때 치아 표면을 닦아주기 때문에", "입안을 따뜻하게 만들어 줘서"], "ans": 2}, {"q": "🍬 사탕보다 젤리나 엿이 치아에 더 나쁜 이유는?", "emoji": "🍮", "opts": ["사탕보다 설탕이 덜 달아서", "치아에 끈적하게 달라붙어 세균이 더 오래 머물게 해서", "색깔이 화려해서 충치 벌레가 좋아해서", "먹을 때 쩝쩝 소리가 크게 나서"], "ans": 1}, {"q": "🥤 콜라 같은 탄산음료가 치아 겉면을 녹이는 이유, 음료가 강한 '이것'을 띠어서?", "emoji": "🥤", "opts": ["알칼리성", "짠맛", "매운맛", "산성"], "ans": 3}, {"q": "🥛🐟 우유나 멸치에 듬뿍 든, 뼈와 치아를 단단하게 하는 영양소는?", "emoji": "🥛", "opts": ["철분", "비타민 C", "칼슘", "단백질"], "ans": 2}, {"q": "💧 음식을 먹고 물을 자주 마시면 치아에 좋은 이유는?", "emoji": "💧", "opts": ["배가 불러 간식을 못 먹게 하려고", "입안 찌꺼기를 씻어내고 세균이 살기 힘든 환경을 만들어서", "물이 치아를 하얗게 표백해 줘서", "차가운 물이 입안을 얼어붙게 해서"], "ans": 1}, {"q": "🍦 충치 세균이 단맛을 먹고 치아를 녹이려고 뿜어내는 물질은?", "emoji": "🍦", "opts": ["침 (타액)", "불소", "산 (Acid)", "산소"], "ans": 2}, {"q": "😴 잠잘 때 적게 나와서 충치균이 빨리 느는, 입안을 촉촉하게 하는 '이것'은?", "emoji": "💧", "opts": ["콧물", "땀", "눈물", "침 (타액)"], "ans": 3}, {"q": "🦠 양치를 안 하면 치아에 생기는 끈적·누런 세균 막을 뭐라고 부를까요?", "emoji": "🦠", "opts": ["프라그 (치태)", "치아 씨앗", "혓바늘", "불소 막"], "ans": 0}, {"q": "🪨 굳어버린 치석을 떼려면 치과에서 받는 치료는?", "emoji": "🦷", "opts": ["임플란트", "스케일링", "신경 치료", "치아 교정"], "ans": 1}, {"q": "🛡️ 치아에 발라 충치를 예방하는 '투명 방패막' 마법의 물질은?", "emoji": "🛡️", "opts": ["수소", "비타민", "불소", "소금물"], "ans": 2}, {"q": "🧵 칫솔이 안 닿는 치아와 치아 '사이'를 닦는 도구는?", "emoji": "🧵", "opts": ["이쑤시개", "면봉", "치실이나 치간칫솔", "혀클리너"], "ans": 2}, {"q": "👅 입 냄새의 가장 큰 원인, 혀에 낀 하얀 세균 막을 뭐라 부를까요?", "emoji": "👅", "opts": ["충치", "구내염", "프라그", "백태"], "ans": 3}, {"q": "🪥 올바른 칫솔질 방향은?", "emoji": "🪥", "opts": ["톱질하듯 옆으로 세게 벅벅", "잇몸에서 치아 쪽으로 쓸어내리듯 위아래로", "안쪽 치아만 열심히", "앞니만 빙글빙글 원을 그리며"], "ans": 1}, {"q": "🍊 신맛(산성) 음식을 먹은 직후 올바른 양치법은?", "emoji": "🍊", "opts": ["먹자마자 바로 칫솔로 세게 닦는다", "물로 헹구고 30분 뒤에 양치한다", "그날은 양치를 하루 쉰다", "뜨거운 물로 입안을 지진다"], "ans": 1}, {"q": "3️⃣ 하루 3번·식후 3분 안에·3분 동안 닦자는 약속을 뭐라 할까요?", "emoji": "⏰", "opts": ["1-2-3 운동", "5-5-5 법칙", "3-3-3 법칙", "7-7-7 약속"], "ans": 2}], S2=[{"mode": "good", "a": {"n": "사탕", "e": "🍬"}, "b": {"n": "우유", "e": "🥛"}, "ans": "B"}, {"mode": "bad", "a": {"n": "당근", "e": "🥕"}, "b": {"n": "젤리", "e": "🍮"}, "ans": "B"}, {"mode": "good", "a": {"n": "콜라", "e": "🥤"}, "b": {"n": "물", "e": "💧"}, "ans": "B"}, {"mode": "bad", "a": {"n": "아이스크림", "e": "🍦"}, "b": {"n": "치즈", "e": "🧀"}, "ans": "A"}, {"mode": "good", "a": {"n": "사과", "e": "🍎"}, "b": {"n": "마카롱", "e": "🧁"}, "ans": "A"}, {"mode": "bad", "a": {"n": "오이", "e": "🥒"}, "b": {"n": "캐러멜", "e": "🍬"}, "ans": "B"}, {"mode": "good", "a": {"n": "브로콜리", "e": "🥦"}, "b": {"n": "초코케이크", "e": "🍰"}, "ans": "A"}, {"mode": "bad", "a": {"n": "밥", "e": "🍚"}, "b": {"n": "달콤한 주스", "e": "🧃"}, "ans": "B"}, {"mode": "good", "a": {"n": "견과류", "e": "🥜"}, "b": {"n": "달고나", "e": "🍯"}, "ans": "A"}, {"mode": "bad", "a": {"n": "토마토", "e": "🍅"}, "b": {"n": "도넛", "e": "🍩"}, "ans": "B"}, {"mode": "good", "a": {"n": "솜사탕", "e": "🍭"}, "b": {"n": "바나나", "e": "🍌"}, "ans": "B"}, {"mode": "bad", "a": {"n": "딸기", "e": "🍓"}, "b": {"n": "초코쿠키", "e": "🍪"}, "ans": "B"}, {"mode": "good", "a": {"n": "수박", "e": "🍉"}, "b": {"n": "초코우유", "e": "🥤"}, "ans": "A"}, {"mode": "bad", "a": {"n": "고구마", "e": "🍠"}, "b": {"n": "달콤한 사이다", "e": "🥤"}, "ans": "B"}, {"mode": "good", "a": {"n": "달콤한 시럽 빙수", "e": "🍧"}, "b": {"n": "생선구이", "e": "🐟"}, "ans": "B"}], S3=[{"n": "우유", "e": "🥛", "ans": "O"}, {"n": "사탕", "e": "🍬", "ans": "X"}, {"n": "사과", "e": "🍎", "ans": "O"}, {"n": "초콜릿", "e": "🍫", "ans": "X"}, {"n": "당근", "e": "🥕", "ans": "O"}, {"n": "콜라", "e": "🥤", "ans": "X"}, {"n": "물", "e": "💧", "ans": "O"}, {"n": "젤리", "e": "🍮", "ans": "X"}, {"n": "밥", "e": "🍚", "ans": "O"}, {"n": "아이스크림", "e": "🍦", "ans": "X"}, {"n": "치즈", "e": "🧀", "ans": "O"}, {"n": "솜사탕", "e": "🍭", "ans": "X"}, {"n": "브로콜리", "e": "🥦", "ans": "O"}, {"n": "달콤한 과자", "e": "🍪", "ans": "X"}, {"n": "바나나", "e": "🍌", "ans": "O"}];
+const AVA=['🐶','🐱','🐰','🐻','🐼','🦊','🐸','🐯','🐨','🐷'];
+const DICE=['','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣'];
+
+// ===== AUDIO =====
+let AC=null;
+function ac(){ if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}} if(AC&&AC.state==='suspended')AC.resume(); return AC; }
+function beep(f,d,type,vol){ const a=ac(); if(!a)return; const o=a.createOscillator(),g=a.createGain();
+ o.type=type||'sine'; o.frequency.value=f; g.gain.value=vol||.18; o.connect(g); g.connect(a.destination);
+ const t=a.currentTime; o.start(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.exponentialRampToValueAtTime(.001,t+(d||.15)); o.stop(t+(d||.15)); }
+function sfxStep(){beep(520,.08,'square',.12);}
+function sfxRoll(){beep(300,.05,'sawtooth',.1);}
+function sfxGood(){beep(660,.12,'sine',.2);setTimeout(()=>beep(880,.16,'sine',.2),120);setTimeout(()=>beep(1100,.2,'sine',.18),260);}
+function sfxBad(){beep(300,.2,'sawtooth',.16);setTimeout(()=>beep(200,.25,'sawtooth',.14),160);}
+function sfxStar(){beep(900,.06,'sine',.16);setTimeout(()=>beep(1300,.1,'sine',.16),70);}
+function sfxBom(){beep(160,.3,'triangle',.2);}
+function sfxFan(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>beep(f,.25,'sine',.2),i*140));}
+function sfxThrob(){beep(180,.12,'sine',.18);setTimeout(()=>beep(180,.12,'sine',.18),260);}
+
+// ===== STATE =====
+let G={ n:4, turns:5, names:[], players:[], cur:0, turn:1, busy:false };
+let CELLS=[]; // 40 cells: {t:'start|island|travel|lucky|gold|quiz', cat, emoji, bg}
+let pools={1:[],2:[],3:[]};
+
+// ===== SETUP UI =====
+function buildSetup(){
+ const nc=document.getElementById('numChips');
+ for(let i=2;i<=10;i++){const b=document.createElement('div');b.className='chip'+(i===4?' sel':'');b.textContent=i+'명';
+  b.onclick=()=>{G.n=i;[...nc.children].forEach(c=>c.classList.remove('sel'));b.classList.add('sel');renderNames();};nc.appendChild(b);}
+ const tc=document.getElementById('turnChips');
+ [3,4,5,6,7,8,10,12,15,20].forEach(t=>{const b=document.createElement('div');b.className='chip'+(t===5?' sel':'');b.textContent=t+'턴';
+  b.onclick=()=>{G.turns=t;[...tc.children].forEach(c=>c.classList.remove('sel'));b.classList.add('sel');};tc.appendChild(b);});
+ renderNames();
+}
+function renderNames(){
+ const a=document.getElementById('nameArea');a.innerHTML='';
+ for(let i=0;i<G.n;i++){const d=document.createElement('div');d.className='ni';
+  d.innerHTML='<span>'+AVA[i]+'</span><input id="nm'+i+'" maxlength="6" placeholder="'+(i+1)+'번 친구 이름">';a.appendChild(d);}
+}
+
+// ===== ENTER =====
+function startEnter(){
+ G.names=[];
+ for(let i=0;i<G.n;i++){const v=(document.getElementById('nm'+i).value||'').trim();G.names.push(v||AVA[i]+' 친구');}
+ G.players=G.names.map((nm,i)=>({name:nm,ava:AVA[i],pos:0,score:0,combo:0,skip:false}));
+ show('enterScreen'); ac();
+ const stg=document.getElementById('enterStage'); stg.innerHTML='';
+ document.getElementById('enterCtrl').style.visibility='hidden';
+ let i=0;
+ (function nx(){
+  if(i>=G.players.length){document.getElementById('enterCtrl').style.visibility='visible';return;}
+  const p=G.players[i]; stg.innerHTML='';
+  const c=document.createElement('div');c.className='enterCard';
+  c.innerHTML='<span style="font-size:64px">'+p.ava+'</span><span>'+esc(p.name)+' 입장!</span>';
+  stg.appendChild(c); beep(500+i*80,.18,'sine',.18); i++; setTimeout(nx,900);
+ })();
+}
+
+// ===== BOARD BUILD =====
+const QUIZCAT={emoji:'🦷',bg:'#cdeaff'};
+function buildBoard(){
+ CELLS=new Array(40);
+ CELLS[0]={t:'start',emoji:'🚩',bg:'#ffe3a3'};
+ CELLS[10]={t:'island',emoji:'🏝️',bg:'#a3e3ff'};
+ CELLS[20]={t:'travel',emoji:'✈️',bg:'#ffc1d6'};
+ CELLS[30]={t:'lucky',emoji:'🎰',bg:'#d9b3ff'};
+ [5,15,25,35,22].forEach(g=>CELLS[g]={t:'gold',emoji:'🔑',bg:'#ffe680'});
+ const quizColors=['#cdebff','#ffe0ec','#e3f7d4','#fff1c2','#e6e0ff','#d4f5ef'];
+ const quizEmojis=['🦷','🍎','🪥','🥦','💧','😁'];
+ let ci=0;
+ for(let i=0;i<40;i++){ if(CELLS[i])continue;
+  CELLS[i]={t:'quiz',emoji:quizEmojis[ci%quizEmojis.length],bg:quizColors[ci%quizColors.length]}; ci++; }
+ layoutBoard();
+}
+// grid position for cell index (11x11 perimeter)
+function cellRC(i){
+ if(i<=10)return{r:0,c:i};            // top L->R 0..10
+ if(i<=19)return{r:i-10,c:10};        // right top->down 11..19
+ if(i<=30)return{r:10,c:30-i};        // bottom R->L 20..30
+ return{r:40-i,c:0};                  // left bottom->up 31..39
+}
+function layoutBoard(){
+ const bd=document.getElementById('board'); [...bd.querySelectorAll('.cell,.tok')].forEach(e=>e.remove());
+ for(let i=0;i<40;i++){
+  const {r,c}=cellRC(i); const cell=document.createElement('div');
+  const corner=(i===0||i===10||i===20||i===30);
+  cell.className='cell'+(corner?' corner':''); cell.id='cell'+i;
+  cell.style.background=CELLS[i].bg;
+  const u=100/11;
+  cell.style.left=(c*u)+'%'; cell.style.top=(r*u)+'%';
+  cell.style.width=u+'%'; cell.style.height=u+'%';
+  cell.innerHTML='<span class="cn">'+i+'</span><span class="ce">'+CELLS[i].emoji+'</span>';
+  bd.appendChild(cell);
+ }
+ G.players.forEach((p,idx)=>{ const t=document.createElement('div');t.className='tok';t.id='tok'+idx;t.textContent=p.ava;bd.appendChild(t);});
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{G.players.forEach((p,i)=>placeTok(i));}));
+}
+function getCellPx(pos){
+ const {r,c}=cellRC(pos%40); const bd=document.getElementById('board'); const w=bd.clientWidth; const u=w/11;
+ return {x:c*u+u/2, y:r*u+u/2};
+}
+function placeTok(idx){
+ const p=G.players[idx]; const t=document.getElementById('tok'+idx); if(!t)return;
+ const {x,y}=getCellPx(p.pos%40);
+ // spread multiple tokens on same cell
+ const same=G.players.filter(q=>q.pos%40===p.pos%40); const k=same.indexOf(p);
+ const off=(k-(same.length-1)/2)*14;
+ t.style.left=(x+off-12)+'px'; t.style.top=(y-12)+'px';
+}
+
+// ===== GAME FLOW =====
+function beginGame(){ show('game'); document.getElementById('game').classList.add('on');
+ buildBoard(); G.cur=0; G.turn=1; G.busy=false; updateSide(); updateCenter(); }
+function show(id){ ['setup','enterScreen','game','result'].forEach(s=>{const e=document.getElementById(s);e.classList.toggle('on',s===id);}); }
+function updateCenter(){
+ const p=G.players[G.cur];
+ document.getElementById('curPlayer').innerHTML='지금은 '+p.ava+' <b>'+esc(p.name)+'</b> 차례!';
+ document.getElementById('turnInfo').textContent='🔁 '+G.turn+' / '+G.turns+' 턴';
+}
+function updateSide(){
+ const order=[...G.players].map((p,i)=>({p,i})).sort((a,b)=>b.p.score-a.p.score||(b.p.pos-a.p.pos));
+ const rankOf={}; order.forEach((o,r)=>rankOf[o.i]=r+1);
+ const sl=document.getElementById('scoreList'); sl.innerHTML='';
+ G.players.forEach((p,i)=>{const d=document.createElement('div');d.className='pl'+(i===G.cur?' act':'');
+  d.innerHTML='<span class="rk">'+rankOf[i]+'위</span><span class="av">'+p.ava+'</span>'+
+   '<span class="nm">'+esc(p.name)+'</span>'+(p.combo>=2?'<span class="cb">🔥'+p.combo+'</span>':'')+
+   '<span class="sc">'+p.score+'</span>';
+  sl.appendChild(d);});
+}
+function nextTurn(){
+ G.busy=false;
+ let guard=0;
+ do{
+  G.cur++;
+  if(G.cur>=G.players.length){G.cur=0;G.turn++;}
+  if(G.turn>G.turns){endGame();return;}
+  guard++;
+  if(G.players[G.cur].skip){ G.players[G.cur].skip=false; toast(G.players[G.cur].ava+' 한 턴 쉬어요 😴'); }
+  else break;
+ }while(guard<100);
+ if(G.turn>G.turns){endGame();return;}
+ updateCenter(); updateSide();
+}
+
+// ===== DICE =====
+function rollDice(){ if(G.busy)return; G.busy=true; ac();
+ const face=document.getElementById('diceFace'); face.classList.add('spin');
+ let n=0,c=0; const iv=setInterval(()=>{n=1+Math.floor(Math.random()*6);face.textContent=DICE[n];sfxRoll();
+  if(++c>10){clearInterval(iv);face.classList.remove('spin');face.textContent=DICE[n];sfxStar();
+   setTimeout(()=>movePlayer(n),350);}},70);
+}
+function movePlayer(steps){
+ const p=G.players[G.cur]; let left=steps;
+ (function st(){
+  if(left<=0){ setTimeout(()=>onLand(),250); return; }
+  p.pos++; left--; sfxStep();
+  if(p.pos%40===0){ p.score++; passStart(); updateSide(); }
+  placeTok(G.cur);
+  setTimeout(st,260);
+ })();
+}
+function passStart(){ const bd=document.getElementById('board'); sparkAt(getCellPx(0),'✨'); }
+
+// ===== ON LAND =====
+function onLand(){
+ const p=G.players[G.cur]; const cell=CELLS[p.pos%40];
+ if(cell.t==='start'){ toast('🚩 출발 통과! +1점'); updateSide(); endStep(); }
+ else if(cell.t==='island'){ p.skip=true; modalSimple('🏝️ 무인도','#3aa0ff','🏝️','무인도에 갇혔어요!<br>다음 턴은 한 번 쉬어요 😴',endStep); }
+ else if(cell.t==='travel'){ openTravel(); }
+ else if(cell.t==='lucky'){ openLucky(); }
+ else if(cell.t==='gold'){ openGold(); }
+ else if(cell.t==='quiz'){ openDiff(); }
+}
+function endStep(){ closeModal(); nextTurn(); }
+
+// ===== MODAL HELPERS =====
+function openModal(){document.getElementById('modal').classList.add('on');}
+function closeModal(){document.getElementById('modal').classList.remove('on');}
+function setHead(txt,color){const h=document.getElementById('mhead');h.innerHTML=txt;h.style.background=color;}
+function body(html){document.getElementById('mbody').innerHTML=html;}
+function modalSimple(title,color,emoji,msg,cb){
+ openModal();setHead(title,color);
+ body('<div class="qemoji">'+emoji+'</div><div class="qtext">'+msg+'</div><button class="go big" id="okBtn">확인 ▶</button>');
+ document.getElementById('okBtn').onclick=cb;
+}
+function toast(msg){ const t=document.createElement('div');t.className='spark';t.style.left='50%';t.style.top='30%';
+ t.style.fontSize='22px';t.style.background='#16324f';t.style.color='#fff';t.style.padding='10px 16px';t.style.borderRadius='14px';
+ t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),1000); }
+function sparkAt(pt,em){ const bd=document.getElementById('board').getBoundingClientRect();
+ for(let i=0;i<6;i++){const s=document.createElement('div');s.className='spark';s.textContent=em||'✨';
+  s.style.left=(bd.left+pt.x+(Math.random()*40-20))+'px';s.style.top=(bd.top+pt.y+(Math.random()*30-15))+'px';
+  document.body.appendChild(s);setTimeout(()=>s.remove(),1000);} sfxStar(); }
+
+// ===== DIFFICULTY PICK (at quiz cell) =====
+function openDiff(){
+ openModal(); setHead('🦷 난이도를 골라요!','#2c587c');
+ body('<div class="qtext">어떤 문제를 풀어볼까요?<br><span style="font-size:18px;color:#3a6d96">정답이면 모두 1점 + 🎁랜덤 보너스!</span></div>'+
+  '<div class="diffbtns">'+
+  '<button class="diffbtn d1" onclick="startQuiz(1)">🟢 1단계 <span class="st">⭐⭐⭐ 어려움 · 4지선다</span></button>'+
+  '<button class="diffbtn d2" onclick="startQuiz(2)">🟡 2단계 <span class="st">⭐⭐ 보통 · 둘 중 고르기</span></button>'+
+  '<button class="diffbtn d3" onclick="startQuiz(3)">🔴 3단계 <span class="st">⭐ 쉬움 · O / X</span></button>'+
+  '</div>');
+}
+function draw(level){ if(pools[level].length===0){ const src=level===1?S1:level===2?S2:S3;
+  pools[level]=src.map((_,i)=>i); for(let i=pools[level].length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pools[level][i],pools[level][j]]=[pools[level][j],pools[level][i]];} }
+ return pools[level].pop(); }
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+
+// ===== QUIZ =====
+let CURQ=null;
+function startQuiz(level){
+ const idx=draw(level);
+ if(level===1)quiz1(S1[idx]); else if(level===2)quiz2(S2[idx]); else quiz3(S3[idx]);
+}
+function quiz1(q){
+ setHead('🟢 1단계 · 생각하기','#36c98e');
+ const order=shuffle(q.opts.map((t,i)=>({t,ok:i===q.ans})));
+ let html='<div class="qemoji">'+q.emoji+'</div><div class="qtext">'+esc(q.q)+'</div>'+
+  '<button class="ghost" style="font-size:18px;margin-bottom:10px" onclick="toggleHint()">💡 힌트 보기</button>'+
+  '<div id="hint" class="hintbox">보기를 천천히 읽어보고, 치아에 정말 좋은(또는 과학적으로 맞는) 것을 골라요!</div>'+
+  '<div class="opts" id="opts"></div><div class="result" id="res"></div>';
+ body(html); const ow=document.getElementById('opts');
+ order.forEach((o,i)=>{const b=document.createElement('button');b.className='opt';
+  b.innerHTML='<span class="num">'+(i+1)+'</span><span>'+esc(o.t)+'</span>';
+  b.onclick=()=>answer(o.ok,b,ow,(order.findIndex(x=>x.ok)+1),order);ow.appendChild(b);});
+ openModal();
+}
+function quiz2(q){
+ setHead('🟡 2단계 · 골라요','#f0ad00');
+ const good=q.mode==='good';
+ const ansKey=q.ans; // 'A' or 'B'
+ const cards=shuffle([{k:'A',d:q.a},{k:'B',d:q.b}]);
+ let html='<div class="qtext">'+(good?'치아에 <b style="color:#1a9d6b">좋은</b> 음식은?':'치아에 <b style="color:#e23d3d">나쁜</b> 음식은?')+'</div>'+
+  '<div class="two" id="opts"></div><div class="result" id="res"></div>';
+ body(html); const ow=document.getElementById('opts');
+ cards.forEach(c=>{const b=document.createElement('button');b.className='foodbtn';
+  b.innerHTML='<span class="fe">'+c.d.e+'</span><span>'+esc(c.d.n)+'</span>';
+  b.onclick=()=>answer(c.k===ansKey,b,ow,esc((ansKey==='A'?q.a:q.b).n),null);ow.appendChild(b);});
+ openModal();
+}
+function quiz3(q){
+ setHead('🔴 3단계 · O / X','#ff6b6b');
+ let html='<div class="qemoji">'+q.e+'</div><div class="qtext"><b>'+esc(q.n)+'</b><br>치아에 좋을까요?</div>'+
+  '<div class="oxwrap" id="opts"></div><div class="result" id="res"></div>';
+ body(html); const ow=document.getElementById('opts');
+ const O=document.createElement('button');O.className='oxbtn oxO';O.innerHTML='<span style="font-size:46px">⭕</span><span class="tooth">😁</span><span>좋아요</span>';
+ const X=document.createElement('button');X.className='oxbtn oxX';X.innerHTML='<span style="font-size:46px">❌</span><span class="tooth">😖</span><span>나빠요</span>';
+ const cor=q.ans==='O'?'⭕':'❌';
+ O.onclick=()=>answer(q.ans==='O',O,ow,cor,null);
+ X.onclick=()=>answer(q.ans==='X',X,ow,cor,null);
+ ow.appendChild(O);ow.appendChild(X);
+ openModal();
+}
+function toggleHint(){document.getElementById('hint').classList.toggle('on');}
+function answer(ok,btn,ow,correctLabel,order){
+ [...ow.children].forEach(b=>b.onclick=null);
+ const p=G.players[G.cur];
+ if(ok){
+  btn.classList.add('ok'); sfxGood();
+  p.combo++; let gain=1; const bonus=Math.floor(Math.random()*3); gain+=bonus;
+  let comboB=0; if(p.combo>=2){comboB=1;gain+=1;}
+  p.score+=gain;
+  let msg='🎉 정답! +'+gain+'점';
+  let extra='';
+  if(bonus>0)extra+='<div class="bonus">🎁 행운 보너스 +'+bonus+'점!</div>';
+  if(comboB>0)extra+='<div class="bonus">🔥 '+p.combo+'연속 콤보 +1점!</div>';
+  document.getElementById('res').innerHTML='<div style="color:#1a9d6b">'+msg+'</div>'+extra;
+  sparkAt(getCellPx(p.pos),'🎉');
+ }else{
+  btn.classList.add('no'); sfxBad(); p.combo=0;
+  // reveal correct
+  if(order){ [...ow.children].forEach((b,i)=>{ if(order[i].ok)b.classList.add('ok'); }); }
+  else{ [...ow.children].forEach(b=>{ if(b!==btn)b.classList.add('ok'); }); }
+  document.getElementById('res').innerHTML='<div style="color:#e23d3d">😊 아쉬워요! 정답은 '+correctLabel+(typeof correctLabel==='number'?'번':'')+' 이에요</div>';
+ }
+ updateSide();
+ const r=document.getElementById('res');
+ const nb=document.createElement('button');nb.className='go big';nb.style.marginTop='12px';nb.textContent='확인 ▶ 다음';
+ nb.onclick=endStep; r.appendChild(nb);
+}
+
+// ===== TRAVEL (✈️) =====
+function openTravel(){
+ openModal(); setHead('✈️ 자유여행','#ff6090');
+ let html='<div class="qemoji">✈️</div><div class="qtext">어디로 갈까요?<br><span style="font-size:18px">가고 싶은 칸을 골라요</span></div><div class="travelGrid" id="tg"></div>';
+ body(html); const tg=document.getElementById('tg'); const base=G.players[G.cur].pos;
+ for(let i=0;i<40;i++){const b=document.createElement('button');b.textContent=i;
+  b.onclick=()=>travelTo(i,base);tg.appendChild(b);}
+}
+function travelTo(target,base){
+ const p=G.players[G.cur]; const cur=base%40;
+ let fwd=(target-cur+40)%40; if(fwd===0)fwd=40; // at least move
+ closeModal();
+ let left=fwd;
+ (function st(){ if(left<=0){setTimeout(onLand,250);return;}
+  p.pos++;left--;sfxStep(); if(p.pos%40===0){p.score++;passStart();updateSide();}
+  placeTok(G.cur); setTimeout(st,200); })();
+}
+
+// ===== LUCKY (🎰) =====
+function openLucky(){
+ openModal(); setHead('🎰 럭키 주사위','#9b59ff');
+ body('<div class="qemoji">🎰</div><div class="qtext">주사위를 굴려 보너스 점수!</div>'+
+  '<div id="lf" style="font-size:64px;height:74px">🎲</div><button class="pri big" id="lb">🎲 굴리기</button>');
+ document.getElementById('lb').onclick=luckyRoll;
+}
+function luckyRoll(){
+ const lb=document.getElementById('lb'); lb.onclick=null; const lf=document.getElementById('lf');
+ let n=0,c=0; lf.classList.add('spin');
+ const iv=setInterval(()=>{n=1+Math.floor(Math.random()*6);lf.textContent=DICE[n];sfxRoll();
+  if(++c>10){clearInterval(iv);lf.classList.remove('spin');sfxStar();
+   const p=G.players[G.cur];p.score+=n;updateSide();
+   body('<div class="qemoji">'+DICE[n]+'</div><div class="result" style="color:#9b59ff">🎰 보너스 +'+n+'점!</div>'+
+    '<button class="go big" id="okBtn">확인 ▶</button>');
+   document.getElementById('okBtn').onclick=endStep;}},80);
+}
+
+// ===== GOLD KEY (🔑) =====
+const GOLD=[
+ {e:'🎉',t:'보너스! +2점',f:p=>{p.score+=2;}},
+ {e:'🚀',t:'3칸 앞으로!',f:p=>{goldMove(3);},move:true},
+ {e:'🎲',t:'주사위 한 번 더!',f:p=>{goldExtra();},extra:true},
+ {e:'🔄',t:'랜덤 친구와 위치 교환!',f:p=>{goldSwap(p);}},
+ {e:'💀',t:'2칸 뒤로 후퇴',f:p=>{goldMove(-2);},move:true},
+ {e:'😴',t:'다음 턴 쉬기',f:p=>{p.skip=true;}},
+ {e:'🌀',t:'랜덤 칸으로 워프!',f:p=>{goldWarp(p);},move:true},
+ {e:'😈',t:'점수 1점 도둑!',f:p=>{p.score=Math.max(0,p.score-1);}},
+];
+let GOLDPICK=null;
+function openGold(){
+ openModal(); setHead('🔑 황금열쇠','#e6a800'); sfxThrob();
+ GOLDPICK=GOLD[Math.floor(Math.random()*GOLD.length)];
+ body('<div class="qtext">두근두근… 카드를 뒤집어요!</div>'+
+  '<div class="flip" id="flip"><div class="flipInner" id="fi">'+
+  '<div class="flipFace flipFront">🔑</div>'+
+  '<div class="flipFace flipBack"><div>'+GOLDPICK.e+'</div><div class="bt">'+GOLDPICK.t+'</div></div>'+
+  '</div></div><button class="pri big" id="flipBtn">카드 뒤집기 🔄</button>');
+ document.getElementById('flipBtn').onclick=flipGold;
+}
+function flipGold(){
+ const fb=document.getElementById('flipBtn'); fb.onclick=null;
+ document.getElementById('fi').classList.add('done'); sfxStar();
+ setTimeout(()=>{ fb.textContent='확인 ▶'; fb.className='go big';
+  fb.onclick=()=>applyGold(); }, 900);
+}
+function applyGold(){
+ const g=GOLDPICK, p=G.players[G.cur];
+ if(g.extra){ closeModal(); sfxGood(); setTimeout(()=>{G.busy=false;rollDice();},300); return; }
+ g.f(p); updateSide();
+ if(g.move){ closeModal(); placeTok(G.cur); setTimeout(()=>nextTurn(),400); }
+ else { sfxGood(); endStep(); }
+}
+function goldMove(d){ const p=G.players[G.cur]; const old=p.pos; p.pos+=d; if(p.pos<0)p.pos=0;
+ if(d>0){ const crosses=Math.floor(p.pos/40)-Math.floor(old/40);
+  if(crosses>0){ p.score+=crosses; passStart(); updateSide(); } }
+ placeTok(G.cur); }
+function goldWarp(p){ const tgt=Math.floor(Math.random()*40); const base=Math.floor(p.pos/40)*40; p.pos=base+tgt; placeTok(G.cur); }
+function goldSwap(p){ if(G.players.length<2)return; let others=G.players.filter(q=>q!==p);
+ const o=others[Math.floor(Math.random()*others.length)]; const tmp=p.pos;p.pos=o.pos;o.pos=tmp;
+ G.players.forEach((_,i)=>placeTok(i)); }
+function goldExtra(){}
+
+// ===== END =====
+function askEnd(){ openModal(); setHead('⏹ 게임 끝내기','#ff9f43');
+ body('<div class="qtext">정말 지금 게임을 끝낼까요?</div><div class="two">'+
+  '<button class="warn big" onclick="endGame()">네, 끝내요</button>'+
+  '<button class="ghost big" onclick="closeModal()">아니요</button></div>'); }
+function endGame(){ closeModal(); show('result');
+ const order=[...G.players].sort((a,b)=>b.score-a.score||b.pos-a.pos);
+ const rl=document.getElementById('rankList'); rl.innerHTML='';
+ const medals=['🥇','🥈','🥉'];
+ order.forEach((p,i)=>{const d=document.createElement('div');d.className='rankItem';
+  d.innerHTML='<span class="medal">'+(medals[i]||((i+1)+'위'))+'</span><span class="av" style="font-size:32px">'+p.ava+'</span>'+
+   '<span style="flex:1">'+esc(p.name)+'</span><span style="color:#ff6090;font-size:30px">'+p.score+'점</span>';
+  rl.appendChild(d);});
+ confetti(); sfxFan();
+}
+function confetti(){ const ems=['🎉','🎊','⭐','🦷','✨','🪥'];
+ for(let i=0;i<60;i++){setTimeout(()=>{const c=document.createElement('div');c.className='confetti';
+  c.textContent=ems[Math.floor(Math.random()*ems.length)];c.style.left=(Math.random()*100)+'vw';
+  const dur=2+Math.random()*2;c.style.transition='transform '+dur+'s linear,opacity '+dur+'s';
+  document.body.appendChild(c);requestAnimationFrame(()=>{c.style.transform='translateY(110vh) rotate('+(Math.random()*720)+'deg)';c.style.opacity='0';});
+  setTimeout(()=>c.remove(),dur*1000);},i*60);} }
+
+// ===== MIC =====
+let micOn=false,micStream=null,analyser=null,micRAF=null,cooldown=false,micData=null;
+async function toggleMic(){
+ if(micOn){ stopMic(); return; }
+ try{
+  micStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  const a=ac(); const src=a.createMediaStreamSource(micStream);
+  analyser=a.createAnalyser(); analyser.fftSize=2048; micData=new Uint8Array(analyser.fftSize);
+  src.connect(analyser); micOn=true;
+  document.getElementById('micBtn').textContent='🎤 마이크로 굴리기 ON'; document.getElementById('micBtn').classList.remove('ghost');document.getElementById('micBtn').classList.add('go');
+  document.getElementById('rollBtn').style.display='none';
+  micLoop();
+ }catch(e){ alert('마이크를 사용할 수 없어요. 버튼으로 주사위를 굴려요! 🎲'); document.getElementById('rollBtn').style.display=''; }
+}
+function stopMic(){ micOn=false; if(micRAF)cancelAnimationFrame(micRAF);
+ if(micStream){micStream.getTracks().forEach(t=>t.stop());micStream=null;}
+ document.getElementById('micBtn').textContent='🎤 마이크로 굴리기 OFF';document.getElementById('micBtn').classList.add('ghost');document.getElementById('micBtn').classList.remove('go');
+ document.getElementById('rollBtn').style.display=''; document.getElementById('gaugeBar').style.width='0%'; }
+function micLoop(){
+ if(!micOn)return;
+ analyser.getByteTimeDomainData(micData);
+ let peak=0; for(let i=0;i<micData.length;i++){const v=Math.abs(micData[i]-128);if(v>peak)peak=v;}
+ const pct=Math.min(100,peak/128*100); const bar=document.getElementById('gaugeBar');
+ bar.style.width=pct+'%'; bar.style.background=pct>70?'#ff4d4d':pct>40?'#ffb300':'#36c98e';
+ const thr=+document.getElementById('thr').value;     // 50~220
+ const need=thr/2;                                     // deviation 25~110
+ if(!cooldown && !G.busy && peak>=need){
+  cooldown=true; setTimeout(()=>{cooldown=false;},2000);
+  rollDice();
+ }
+ micRAF=requestAnimationFrame(micLoop);
+}
+
+// ===== UTIL =====
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+// ===== INIT =====
+buildSetup();
+
+</script>
+</body></html>

@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>AI 기반 모두의 슐런</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; overflow:hidden; font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif; background:#2a1a0d; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; overscroll-behavior:none; }
+  #screen { position:fixed; inset:0; display:flex; align-items:stretch; justify-content:center; background:#2a1a0d; }
+  #app { position:relative; width:100%; height:100%; flex:1 1 auto; touch-action:manipulation; overflow:hidden; background:#2a1a0d; }
+  canvas { display:block; width:100%; height:100%; touch-action:none; }
+  .sidebar { display:none; }
+
+  #lbOverlay {
+    position:absolute; top:10px; right:10px; z-index:15;
+    background:rgba(20,12,5,.92); border:1px solid #6b4521; border-radius:14px;
+    padding:8px 12px; width:180px; pointer-events:none; box-shadow:0 4px 16px rgba(0,0,0,.5);
+  }
+
+  #helpBanner {
+    position:absolute; top:46px; left:10px; z-index:15;
+    background:rgba(20,12,5,.92); border:1px solid #6b4521; border-radius:14px;
+    padding:8px 10px; width:158px; pointer-events:none; box-shadow:0 4px 16px rgba(0,0,0,.5);
+  }
+  #helpBanner .hb-title { font-size:12px; font-weight:900; color:#ffcf6b; margin-bottom:6px; text-align:center; }
+  #helpBanner .hb-gates { display:flex; gap:4px; margin-bottom:6px; }
+  #helpBanner .hb-gates .g { flex:1; text-align:center; background:rgba(107,69,33,.4); border:1px solid rgba(107,69,33,.6); border-radius:6px; padding:3px 0; }
+  #helpBanner .hb-gates .g b { display:block; font-size:15px; color:#ffcf6b; line-height:1.1; }
+  #helpBanner .hb-gates .g span { font-size:8px; opacity:.7; color:#f0d9b5; }
+  #helpBanner .hb-rule { display:flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; color:#f0d9b5; line-height:1.3; margin-top:3px; }
+  #helpBanner .hb-rule .ic { flex:0 0 auto; font-size:11px; }
+  #helpBanner .hb-rule b { color:#ffcf6b; }
+
+  /* On phones the side panels were covering the play area — make them compact. */
+  @media (max-width:540px){
+    #lbOverlay { width:118px; padding:5px 7px; top:6px; right:6px; border-radius:10px; }
+    #lbOverlay .lb-title { font-size:10px; margin-bottom:3px; }
+    .lb-list { gap:2px; }
+    .lb-item { font-size:9.5px; padding:2px 5px; border-radius:6px; }
+    .lb-item .rk { font-size:9px; }
+    .lb-item .sc { font-size:9px; }
+    #helpBanner { width:118px; padding:5px 7px; top:38px; left:6px; border-radius:10px; }
+    #helpBanner .hb-title { font-size:9.5px; margin-bottom:3px; }
+    #helpBanner .hb-gates { gap:3px; margin-bottom:3px; }
+    #helpBanner .hb-gates .g b { font-size:12px; }
+    #helpBanner .hb-gates .g span { font-size:6.5px; }
+    #helpBanner .hb-rule { font-size:8.5px; gap:3px; margin-top:2px; }
+    #helpBanner .hb-rule .ic { font-size:9px; }
+  }
+  #lbOverlay .lb-title { font-size:13px; font-weight:900; color:#ffcf6b; margin-bottom:6px; text-align:center; }
+  .lb-list { list-style:none; display:flex; flex-direction:column; gap:4px; width:100%; }
+  .lb-item { display:flex; align-items:center; justify-content:space-between; gap:6px;
+    background:rgba(255,255,255,.05); border:1px solid rgba(107,69,33,.5); border-radius:8px;
+    padding:5px 8px; font-size:12px; font-weight:800; color:#f0d9b5; }
+  .lb-item .rk { width:1.4em; text-align:center; flex:0 0 auto; font-size:11px; }
+  .lb-item .nm { flex:1 1 auto; min-width:0; text-align:left; margin:0 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lb-item .sc { flex:0 0 auto; font-size:11px; }
+  .lb-item .sc b { color:#ffcf6b; }
+  .lb-item.me { border-color:#ffcf6b; box-shadow:0 0 0 1px #ffcf6b inset; background:rgba(255,207,107,.12); }
+
+  .name-input { width:100%; max-width:420px; padding:11px 16px; border:2px solid #7a542f; border-radius:14px;
+    background:rgba(255,255,255,.06); color:#fff; font-size:18px; font-weight:700; text-align:center; outline:none;
+    -webkit-user-select:text; user-select:text; -webkit-touch-callout:default; }
+  .name-input:focus { border-color:#ffcf6b; }
+  .name-input::placeholder { color:#b08f63; font-weight:500; }
+
+  #scoreboard {
+    position:absolute; top:0; left:0; right:0; z-index:10; color:#fff;
+    background:linear-gradient(180deg,rgba(20,12,5,.96),rgba(20,12,5,.82));
+    border-bottom:2px solid #6b4521; padding:6px 10px 8px; pointer-events:none;
+  }
+  #sb-top { display:flex; align-items:center; justify-content:space-between; padding:0 6px 4px; }
+  #sb-title { font-size:13px; color:#e6c89a; letter-spacing:1px; }
+  #sb-1p { font-size:15px; font-weight:800; }
+  #sb-1p b { color:#ffcf6b; font-size:22px; }
+  #sb-2p { display:none; font-size:14px; font-weight:800; gap:12px; align-items:center; }
+  #sb-2p .p1s b { color:#ffcf6b; font-size:20px; }
+  #sb-2p .p2s b { color:#7ab8e8; font-size:20px; }
+  #sb-2p .vs { color:#888; font-size:12px; }
+  #sb-rounds { font-size:12px; color:#e6c89a; padding:0 6px; min-height:16px; }
+
+  .name-input[data-p2] { border-color:#4a90d9; }
+  .name-input[data-p2]:focus { border-color:#7ab8e8; }
+
+  #hint {
+    position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+    color:#fff; font-size:clamp(20px,5vw,30px); font-weight:700; text-align:center;
+    z-index:10; pointer-events:none; text-shadow:0 2px 8px rgba(0,0,0,.6); width:90%; transition:opacity .2s;
+  }
+  #subhint { position:absolute; bottom:0; left:50%; transform:translateX(-50%); color:#e6c89a; font-size:16px; z-index:10; pointer-events:none; padding-bottom:6px; }
+
+  #commentary {
+    position:absolute; top:110px; left:50%; transform:translateX(-50%);
+    max-width:88%; background:rgba(255,255,255,.96); color:#3a2410;
+    padding:11px 18px; border-radius:18px; font-size:16px; line-height:1.45;
+    z-index:9; box-shadow:0 6px 20px rgba(0,0,0,.35); text-align:center; opacity:0; transition:opacity .3s; font-weight:600;
+  }
+  #commentary.show { opacity:1; }
+  #commentary .coach { display:block; margin-top:4px; font-size:13px; color:#b06a00; font-weight:700; }
+
+  #challengeInfo {
+    position:absolute; top:72px; left:50%; transform:translateX(-50%);
+    z-index:11; display:flex; gap:6px; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; pointer-events:none; white-space:nowrap; flex-wrap:wrap;
+  }
+  #challengeInfo .pill {
+    background:rgba(58,36,16,.9); border:1px solid #ffcf6b; border-radius:999px;
+    padding:5px 10px; font-size:13px; box-shadow:0 2px 8px rgba(0,0,0,.25);
+  }
+  #challengeInfo .pill.p2pill { border-color:#7ab8e8; }
+  #challengeInfo b { color:#ffcf6b; font-size:16px; }
+  #challengeInfo b.b2 { color:#7ab8e8; }
+
+  #overlay {
+    position:absolute; inset:0; z-index:20; background:rgba(30,18,9,.98);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    color:#fff; padding:10px; text-align:center; overflow-y:auto;
+  }
+  #overlay h1 { font-size:clamp(26px,7vw,44px); margin-bottom:4px; letter-spacing:-1px; word-break:keep-all; }
+  #overlay h1 span { color:#ffcf6b; }
+  #rules { background:rgba(255,255,255,.06); border:1px solid #6b4521; border-radius:16px; padding:9px 14px; max-width:460px; width:100%; margin:6px 0 8px; text-align:left; }
+  #rules h3 { font-size:15px; color:#ffcf6b; margin-bottom:5px; text-align:center; }
+  #rules ol { list-style:none; counter-reset:r; }
+  #rules li { counter-increment:r; position:relative; padding:3px 0 3px 30px; font-size:13px; line-height:1.35; opacity:.95; }
+  #rules li::before { content:counter(r); position:absolute; left:0; top:3px; width:22px; height:22px; background:#c98a3a; color:#fff; border-radius:50%; font-size:12px; font-weight:800; display:flex; align-items:center; justify-content:center; }
+  #rules .pts { display:flex; gap:6px; justify-content:center; margin-top:6px; }
+  #rules .pts .pc { flex:1; text-align:center; background:rgba(107,69,33,.4); border-radius:8px; padding:4px 0; }
+  #rules .pts .pc b { display:block; font-size:20px; color:#ffcf6b; }
+  #rules .pts .pc span { font-size:11px; opacity:.7; }
+  .opt-group { margin-bottom:8px; width:100%; max-width:420px; }
+  .opt-title { font-size:13px; opacity:.7; margin-bottom:4px; }
+  .opt-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; }
+  .opt-btn { flex:1; min-width:90px; padding:10px 8px; border:2px solid #7a542f; border-radius:14px; background:transparent; color:#f0d9b5; font-size:15px; font-weight:700; cursor:pointer; transition:all .15s; }
+  .opt-btn.sel { background:#c98a3a; border-color:#ffcf6b; color:#fff; }
+  #startBtn { margin-top:4px; padding:12px 44px; font-size:21px; font-weight:800; background:linear-gradient(135deg,#e08a2d,#ffcf6b); color:#3a2410; border:none; border-radius:50px; cursor:pointer; box-shadow:0 8px 24px rgba(224,138,45,.4); }
+  #startBtn:active { transform:scale(.96); }
+
+  #result { position:absolute; inset:0; z-index:21; background:rgba(30,18,9,.98); display:none; flex-direction:column; align-items:center; justify-content:center; color:#fff; padding:24px; text-align:center; overflow-y:auto; }
+  #result h2 { font-size:clamp(28px,8vw,46px); margin-bottom:10px; color:#ffcf6b; }
+  #result h2.pop { animation:rTitlePop .62s cubic-bezier(.2,1.7,.4,1); }
+  @keyframes rTitlePop { 0%{transform:scale(.35);opacity:0} 55%{transform:scale(1.18);opacity:1} 100%{transform:scale(1)} }
+  .confetti-wrap { position:fixed; inset:0; overflow:hidden; pointer-events:none; z-index:40; }
+  .confetti-pc { position:absolute; top:-24px; border-radius:2px; will-change:transform; }
+  @keyframes confFall { to { transform:translateY(115vh) rotate(var(--r)); opacity:.85; } }
+  #result .rscore { font-size:22px; margin-bottom:8px; }
+  #result .rmsg { font-size:17px; opacity:.85; margin-bottom:20px; max-width:440px; line-height:1.5; }
+  .r2p-table { display:none; flex-direction:column; gap:10px; width:100%; max-width:380px; margin-bottom:20px; }
+  .r2p-row { display:flex; align-items:center; justify-content:space-between; background:rgba(255,255,255,.07); border-radius:14px; padding:12px 18px; border:2px solid transparent; }
+  .r2p-row.winner { border-color:#ffcf6b; background:rgba(255,207,107,.12); }
+  .r2p-row.p2row { }
+  .r2p-row .pname { font-size:18px; font-weight:800; }
+  .r2p-row.p2row .pname { color:#7ab8e8; }
+  .r2p-row .pval { font-size:26px; font-weight:900; color:#ffcf6b; }
+  .r2p-row.p2row .pval { color:#7ab8e8; }
+
+  #switchBanner {
+    position:absolute; inset:0; z-index:18; background:rgba(20,12,5,.95);
+    display:none; flex-direction:column; align-items:center; justify-content:center;
+    color:#fff; text-align:center; pointer-events:none; /* let the tap reach the canvas onDown */
+  }
+  #switchBanner .sw-sub { font-size:15px; opacity:.7; margin-bottom:8px; }
+  #switchBanner .sw-name { font-size:clamp(36px,10vw,58px); font-weight:900; margin-bottom:8px; }
+  #switchBanner .sw-name.p2 { color:#7ab8e8; }
+  #switchBanner .sw-pucks { font-size:16px; color:#e6c89a; margin-bottom:16px; }
+  #switchBanner .sw-tap { font-size:15px; opacity:.6; }
+
+  .popText {
+    position:absolute; left:50%; top:48%; transform:translate(-50%,-50%) scale(.8);
+    z-index:12; color:#fff; font-size:clamp(34px,10vw,70px); font-weight:900;
+    text-shadow:0 5px 18px rgba(0,0,0,.7); pointer-events:none; opacity:0;
+    animation:popText .75s ease-out forwards;
+  }
+  @keyframes popText {
+    0%   { opacity:0; transform:translate(-50%,-50%) scale(.65); }
+    25%  { opacity:1; transform:translate(-50%,-50%) scale(1.08); }
+    100% { opacity:0; transform:translate(-50%,-64%) scale(1); }
+  }
+</style>
+</head>
+<body>
+<div id="screen">
+<div id="app">
+  <div id="lbOverlay">
+    <div class="lb-title">🏆 오늘 랭킹 TOP5</div>
+    <ol class="lb-list" id="lbList"></ol>
+  </div>
+
+  <div id="helpBanner">
+    <div class="hb-title">🎯 점수 획득 방법</div>
+    <div class="hb-gates">
+      <div class="g"><b>2</b><span>왼쪽</span></div>
+      <div class="g"><b>3</b><span>가운데</span></div>
+      <div class="g"><b>4</b><span>가운데</span></div>
+      <div class="g"><b>1</b><span>오른쪽</span></div>
+    </div>
+    <div class="hb-rule"><span class="ic">👆</span><span><b>탭</b>으로 방향, <b>탭</b>으로 세기</span></div>
+    <div class="hb-rule"><span class="ic">🎁</span><span>네 칸 골고루 <b>한 세트 = 20점!</b></span></div>
+    <div class="hb-rule"><span class="ic">📊</span><span>몰아넣기보다 <b>골고루 분배</b>가 유리</span></div>
+  </div>
+
+  <canvas id="game"></canvas>
+
+  <div id="scoreboard">
+    <div id="sb-top">
+      <span id="sb-title">🎯 AI 기반 모두의 슐런</span>
+      <span id="sb-1p">총점 <b id="sb-num">0</b></span>
+      <span id="sb-2p">
+        <span class="p1s" id="sb-p1s">P1 <b>0</b></span>
+        <span class="vs">VS</span>
+        <span class="p2s" id="sb-p2s">P2 <b>0</b></span>
+      </span>
+    </div>
+    <div id="sb-rounds"></div>
+  </div>
+
+  <div id="commentary"></div>
+
+  <div id="challengeInfo">
+    <span class="pill" id="ci-round">라운드 <b id="roundNum">1</b></span>
+    <span class="pill" id="ci-pucks">남은 퍽 <b id="pucksNum">10</b>개</span>
+    <span class="pill p2pill" id="ci-player" style="display:none"><b id="playerLabel" class="b2">P1</b> 차례</span>
+    <span class="pill" id="ci-best" style="display:none">최고 <b id="bestNum">0</b>점</span>
+  </div>
+  <div id="hint"></div>
+  <div id="subhint"></div>
+
+  <div id="switchBanner">
+    <div class="sw-sub">다음 차례</div>
+    <div class="sw-name" id="swName">P2</div>
+    <div class="sw-pucks" id="swPucks">퍽 10개</div>
+    <div class="sw-tap">화면을 터치하면 시작합니다</div>
+  </div>
+
+  <div id="overlay">
+    <h1>AI 기반 <span>모두의</span> 슐런</h1>
+    <div id="rules">
+      <h3 id="rulesTitle">AI 기반 모두의 슐런</h3>
+      <ol id="rulesList">
+        <li><b>탭</b>으로 방향을 맞추고, <b>다시 탭</b>으로 세기를 정해 발사해요.</li>
+        <li><b>퍽 10개</b>를 모두 던지면 최종 점수가 나와요.</li>
+        <li>칸 숫자대로 득점 · <b>네 칸 골고루 한 세트면 20점!</b></li>
+        <li>한 칸에 몰아넣기보다 <b>골고루 분배</b>가 유리해요.</li>
+      </ol>
+      <div class="pts">
+        <div class="pc"><b>2</b><span>왼쪽</span></div>
+        <div class="pc"><b>3</b><span>가운데</span></div>
+        <div class="pc"><b>4</b><span>가운데</span></div>
+        <div class="pc"><b>1</b><span>오른쪽</span></div>
+      </div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-title">게임 모드</div>
+      <div class="opt-row" id="modeRow">
+        <button class="opt-btn sel" data-mode="1">🧑 1인용</button>
+        <button class="opt-btn" data-mode="2">👥 2인용</button>
+      </div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-title">조작 방식</div>
+      <div class="opt-row" id="controlRow">
+        <button class="opt-btn sel" data-control="0">🙌 참여 모드</button>
+        <button class="opt-btn" data-control="1">🔥 도전 모드</button>
+      </div>
+    </div>
+
+    <div class="opt-group">
+      <div class="opt-title" id="p1Label">참가자 이름</div>
+      <input id="nameInput" class="name-input" maxlength="8" placeholder="이름 입력 (선택)" autocomplete="off" autocapitalize="off">
+    </div>
+    <div class="opt-group" id="p2Group" style="display:none">
+      <div class="opt-title">2번 참가자 이름</div>
+      <input id="nameInput2" class="name-input" data-p2 maxlength="8" placeholder="2번 참가자 이름 (선택)" autocomplete="off" autocapitalize="off">
+    </div>
+
+    <button id="startBtn">게임 시작</button>
+  </div>
+
+  <div id="result">
+    <h2 id="rTitle"></h2>
+    <div class="rscore" id="rScoreText"></div>
+    <div class="r2p-table" id="r2pTable">
+      <div class="r2p-row" id="rP1Row"><span class="pname" id="rP1Name">P1</span><span class="pval" id="rP1Val">0점</span></div>
+      <div class="r2p-row p2row" id="rP2Row"><span class="pname" id="rP2Name">P2</span><span class="pval" id="rP2Val">0점</span></div>
+    </div>
+    <div class="rmsg" id="rMsg"></div>
+    <button id="startBtn2" class="opt-btn sel" style="padding:16px 48px;font-size:20px;max-width:none;">다시 도전</button>
+  </div>
+</div>
+</div>
+
+<script>
+(function(){
+  const cv=document.getElementById('game');
+  const ctx=cv.getContext('2d');
+  let W=0,H=0,DPR=Math.min(window.devicePixelRatio||1,2);
+
+  function resize(){
+    W=cv.clientWidth; H=cv.clientHeight;
+    cv.width=W*DPR; cv.height=H*DPR;
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    computeLayout();
+  }
+  window.addEventListener('resize',resize);
+
+  const TOPBAR=100;
+  let vanishX=0,nearY=0,farY=0,nearHalfW=0,farHalfW=0,gateZ=0,zRatio=4;
+  function computeLayout(){
+    // 세로(테이블 모니터)에서는 보드를 더 넓고 길게 펴서 화면을 꽉 채운다.
+    const portrait = H > W;
+    vanishX=W*0.5;
+    nearY=H*(portrait?0.95:0.92);            // 가까운 쪽(아래) — 세로에선 바닥까지
+    farY=TOPBAR+H*(portrait?0.03:0.05);      // 먼 쪽(위, 게이트) — 세로에선 상단까지
+    nearHalfW=W*(portrait?0.47:0.40);        // 가까운 쪽 절반 폭 — 세로에선 더 넓게
+    farHalfW=W*(portrait?0.28:0.16);         // 먼 쪽 절반 폭 — 세로에선 덜 좁혀 양옆 여백 축소
+    gateZ=0.92;
+    // How many x-units one z-unit spans physically (board depth is much longer than width).
+    // Used so puck collisions only fire on real contact, not when merely passing nearby in depth.
+    zRatio=(nearY-farY)/(0.55*nearHalfW);
+  }
+  function project(x,z){
+    const y=nearY+(farY-nearY)*z;
+    const halfW=nearHalfW+(farHalfW-nearHalfW)*z;
+    return {sx:vanishX+x*halfW, sy:y, scale:halfW/nearHalfW, halfW};
+  }
+
+  const GATE_POINTS=[2,3,4,1];
+  function gateXRange(i){ return [-1+i*0.5,-1+(i+1)*0.5]; }
+  const GATE_OPEN_HALF=0.145;  // 득점 허용폭 확대(0.13→0.145): 유효 판정폭 ±0.06→±0.075, 평균 성공률↑
+
+  // Puck palettes: [P1 warm wood, P2 blue]
+  const PAL=[
+    {t1:'#e8b873',t2:'#cf944a',t3:'#a86a2c',side:'#8a5018',hole:'#5a3712',grain:'rgba(122,77,28,.5)',hi:'rgba(255,230,160,.35)'},
+    {t1:'#7ab8e8',t2:'#4a90d9',t3:'#2c6ab8',side:'#1a5088',hole:'#0d3060',grain:'rgba(28,77,140,.5)', hi:'rgba(160,210,255,.35)'}
+  ];
+
+  // ===== Game constants =====
+  const PUCKS_PER_PLAYER=10;
+
+  // ===== State =====
+  const ST={AIM:'aim',POWER:'power',FLICK:'flick',DELIVER:'deliver',SLIDE:'slide',BETWEEN:'between'};
+  let state=ST.AIM;
+  let disks=[], active=null;
+  let advancing=false;   // 보드가 다 멈춘 뒤 다음 투구로 넘어가는 중인지
+  let sinkers=[]; // pucks animating into a gate (scored), for a smooth drop-in
+
+  // Per-turn tracking
+  let currentTurnThrows=0;   // pucks thrown so far this turn
+  let currentTurnScored=0;   // pucks scored so far this turn
+  let currentTurnGates=[false,false,false,false]; // which gates hit this turn
+
+  // Puck pools
+  let pucksLeft=[PUCKS_PER_PLAYER,PUCKS_PER_PLAYER]; // index 0=P1, 1=P2 (or solo)
+
+  // Scores
+  let score=0;
+  let playerScores=[0,0];
+
+  // Mode
+  let gameMode=1;
+  let currentPlayer=0;
+  let playerNames=['익명','P2'];
+  let playerName='익명';
+
+  // Gate count (visual dots)
+  let gateCount=[0,0,0,0];
+
+  // Leaderboard
+  function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function loadLB(){ try{ const o=JSON.parse(localStorage.getItem('sjoelenLB')||'null'); if(o&&o.date===todayKey()&&Array.isArray(o.scores)) return o; }catch(e){} return {date:todayKey(),scores:[]}; }
+  let leaderboard=loadLB();
+  let bestScore=leaderboard.scores.length?(leaderboard.scores[0].score||0):0;
+  let lastEntryId=-1;
+  function saveLB(){ try{ localStorage.setItem('sjoelenLB',JSON.stringify(leaderboard)); }catch(e){} }
+  function recordScore(name,s){
+    const id=Date.now()+Math.random();
+    leaderboard.date=todayKey();
+    leaderboard.scores.push({name:(name||'익명'),score:s,id});
+    leaderboard.scores.sort((a,b)=>b.score-a.score);
+    leaderboard.scores=leaderboard.scores.slice(0,50);
+    bestScore=leaderboard.scores[0].score;
+    lastEntryId=id;
+    saveLB(); renderLeaderboard();
+  }
+  function renderLeaderboard(){
+    const el=document.getElementById('lbList'); if(!el) return;
+    const medals=['🥇','🥈','🥉','4','5'];
+    let html='';
+    for(let i=0;i<5;i++){
+      const e=leaderboard.scores[i];
+      if(!e){ html+=`<li class="lb-item" style="opacity:.35"><span class="rk">${medals[i]}</span><span class="nm">—</span><span class="sc"></span></li>`; continue; }
+      const me=(e.id===lastEntryId)?' me':'';
+      html+=`<li class="lb-item${me}"><span class="rk">${medals[i]}</span><span class="nm">${escapeHtml(e.name)}</span><span class="sc"><b>${e.score}</b>점</span></li>`;
+    }
+    el.innerHTML=html;
+  }
+
+  // 옵션 제거 → 고정값: 난이도 보통(diff 1) / 도움 끔(assist 0) / 효과 피드백 항상 켬(feedback 1)
+  let cfg={assist:0,feedback:1,diff:1,control:0};  // control 0=탭, 1=플릭(스와이프)
+  let aimAngle=0, aimDir=1, power=0, powDir=1, lockedAngle=0;
+  // Tap aiming (컬링과 동일): the aim line auto-sweeps left/right — tap to lock direction,
+  // then the power gauge auto-fills — tap again to launch. No dragging.
+  const AIM_MAX=0.95;
+  const AIM_SCAN=0.013, POW_SCAN=0.018;
+  const SWEEP_MULT=[1.0,1.3,2.1];  // 쉬움 / 보통 / 어려움 — faster sweep = harder timing (보통을 1.5→1.3으로 완화)
+  let deliver={t:0,x:0,power:0};
+  const diskWorldR=0.07;
+  let lastBumpFeedback=0;
+
+  // ===== Audio =====
+  let audioCtx=null;
+  function ensureAudio(){
+    if(!audioCtx){ const AC=window.AudioContext||window.webkitAudioContext; if(AC) audioCtx=new AC(); }
+    if(audioCtx&&audioCtx.state==='suspended') audioCtx.resume();
+  }
+  function tone(freq,start,dur,type='sine',gain=0.08){
+    if(!audioCtx) return;
+    const now=audioCtx.currentTime;
+    const osc=audioCtx.createOscillator(), g=audioCtx.createGain();
+    osc.type=type; osc.frequency.setValueAtTime(freq,now+start);
+    g.gain.setValueAtTime(0.0001,now+start);
+    g.gain.exponentialRampToValueAtTime(gain,now+start+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001,now+start+dur);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(now+start); osc.stop(now+start+dur+0.03);
+  }
+  let clapBuf=null;
+  function getClapBuf(){
+    if(clapBuf) return clapBuf;
+    const sr=audioCtx.sampleRate,len=Math.floor(sr*0.06);
+    const b=audioCtx.createBuffer(1,len,sr),d=b.getChannelData(0);
+    for(let i=0;i<len;i++){const env=Math.pow(1-i/len,2.4);d[i]=(Math.random()*2-1)*env;}
+    clapBuf=b; return b;
+  }
+  function playApplause(){
+    if(!audioCtx) return;
+    const now=audioCtx.currentTime,buf=getClapBuf();
+    const bp=audioCtx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=1700; bp.Q.value=0.8;
+    const master=audioCtx.createGain(); master.gain.value=0.9;
+    bp.connect(master); master.connect(audioCtx.destination);
+    for(let c=0;c<22;c++){
+      const t=now+Math.pow(Math.random(),0.65)*0.7;
+      const src=audioCtx.createBufferSource(); src.buffer=buf;
+      src.playbackRate.value=0.82+Math.random()*0.55;
+      const g=audioCtx.createGain(); g.gain.value=0.12+Math.random()*0.22;
+      src.connect(g); g.connect(bp); src.start(t);
+    }
+  }
+  function playGoalFeedback(){
+    if(!cfg.feedback) return;
+    ensureAudio();
+    tone(180,0,0.09,'triangle',0.12); tone(520,0.06,0.12,'sine',0.07); tone(780,0.15,0.16,'sine',0.055);
+    playApplause();
+    if(navigator.vibrate) navigator.vibrate([45,25,35]);
+  }
+  function playBonusFeedback(){
+    if(!cfg.feedback) return;
+    ensureAudio();
+    tone(330,0,0.1,'sine',0.1); tone(440,0.1,0.1,'sine',0.1); tone(550,0.2,0.1,'sine',0.1); tone(660,0.3,0.25,'sine',0.12);
+    if(navigator.vibrate) navigator.vibrate([60,30,60,30,80]);
+  }
+  function playBumpFeedback(){
+    if(!cfg.feedback) return;
+    const now=performance.now(); if(now-lastBumpFeedback<180) return; lastBumpFeedback=now;
+    ensureAudio(); tone(130,0,0.06,'square',0.045);
+    if(navigator.vibrate) navigator.vibrate(18);
+  }
+
+  // ===== Speech =====
+  let voices=[];
+  function loadVoices(){ voices=window.speechSynthesis?speechSynthesis.getVoices():[]; }
+  if(window.speechSynthesis){ loadVoices(); speechSynthesis.onvoiceschanged=loadVoices; }
+  function speak(t){
+    if(!window.speechSynthesis) return;
+    try{ speechSynthesis.cancel();
+      const u=new SpeechSynthesisUtterance(t); u.lang='ko-KR'; u.rate=1.0; u.pitch=1.05;
+      const kv=voices.find(v=>v.lang&&v.lang.toLowerCase().startsWith('ko')); if(kv) u.voice=kv;
+      speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  const hint=document.getElementById('hint'),subhint=document.getElementById('subhint');
+  function setHint(m,s){ hint.textContent=m||''; subhint.textContent=s||''; }
+
+  // ===== UI update =====
+  function updateChallengeInfo(){
+    const myPucks=pucksLeft[gameMode===2?currentPlayer:0];
+    document.getElementById('pucksNum').textContent=Math.max(0,myPucks-currentTurnThrows-(active?1:0));
+    if(gameMode===2){
+      const lbl=document.getElementById('playerLabel');
+      lbl.textContent=playerNames[currentPlayer]||'P'+(currentPlayer+1);
+      lbl.className=currentPlayer===0?'':'b2';
+    }
+    document.getElementById('bestNum').textContent=bestScore;
+    // scoreboard
+    if(gameMode===1){
+      document.getElementById('sb-num').textContent=score;
+    } else {
+      document.getElementById('sb-p1s').innerHTML=(playerNames[0]||'P1')+' <b>'+playerScores[0]+'</b>';
+      document.getElementById('sb-p2s').innerHTML=(playerNames[1]||'P2')+' <b>'+playerScores[1]+'</b>';
+    }
+  }
+
+  // ===== Commentary =====
+  function generateCommentary(info){
+    const good=[`${info.points}점! 멋져요.`,`${info.points}점 획득!`,`정확해요! ${info.points}점.`];
+    const miss=['아쉽게 빗나갔어요!','살짝 빗나갔네요.','다시 도전!'];
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    let main=info.scored?pick(good):pick(miss);
+    let coach='';
+    if(cfg.assist){
+      if(!info.scored) coach='🎯 코칭: 방향을 칸 중앙에 맞추고, 너무 세지 않게 쳐보세요.';
+      else {
+        const missing=currentTurnGates.map((v,i)=>v?-1:i).filter(i=>i>=0);
+        if(missing.length) coach=`🎯 코칭: 아직 ${missing.map(i=>GATE_POINTS[i]+'점').join(', ')} 칸이 비었어요! 골고루 채우면 세트 20점.`;
+        else coach='🎯 세트 완성! 이대로 골고루 넣어요.';
+      }
+    }
+    return {main,coach};
+  }
+  function showCommentary(info){
+    const el=document.getElementById('commentary');
+    const c=generateCommentary(info);
+    el.innerHTML=c.main+(c.coach?`<span class="coach">${c.coach}</span>`:'');
+    el.classList.add('show'); speak(c.main);
+    clearTimeout(showCommentary._t);
+    showCommentary._t=setTimeout(()=>el.classList.remove('show'),3000);
+  }
+
+  // ===== Pointer input =====
+  // 탭 모드: 스캔 조준을 탭 → 게이지를 탭. 플릭 모드: 퍽을 위로 밀어(스와이프) 발사.
+  let flickStart=null, flickCur=null;
+  function pointerXY(e){ const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H}; }
+  function onDown(e){
+    if(e.isPrimary===false) return;   // ignore extra fingers so a 2-finger touch can't auto-fire
+    e.preventDefault(); ensureAudio(); cancelAttract();
+    const banner=document.getElementById('switchBanner');
+    if(banner.style.display==='flex'){ hideSwitchBanner(); return; }
+    if(cfg.control===1){                      // 플릭 모드: 스와이프 시작점 기록
+      if(state===ST.FLICK){ flickStart=pointerXY(e); flickCur=flickStart; }
+      return;
+    }
+    if(state===ST.AIM){                        // 탭: 1번째 탭 → 방향 확정
+      lockedAngle=aimAngle; state=ST.POWER; power=0; powDir=1;
+      setHint('세기가 좋을 때 한 번 더 탭!','게이지가 차오르고 있어요');
+    } else if(state===ST.POWER){               // 탭: 2번째 탭 → 발사
+      launchAim();
+    }
+  }
+  function onMove(e){ if(cfg.control===1 && flickStart){ e.preventDefault(); flickCur=pointerXY(e); } }
+  function onUp(e){
+    if(cfg.control!==1 || !flickStart) return;
+    e.preventDefault();
+    const end=pointerXY(e);
+    const dxs=end.x-flickStart.x, dys=flickStart.y-end.y;   // dys>0 = 위로(전방)
+    flickStart=null; flickCur=null;
+    if(state!==ST.FLICK) return;
+    if(dys<18){ setHint('퍽을 위로 밀어 던져요','위로 밀수록 세게 · 좌우로 각도'); return; }
+    launchFlick(dxs,dys);
+  }
+  cv.addEventListener('pointerdown',onDown);
+  cv.addEventListener('pointermove',onMove);
+  cv.addEventListener('pointerup',onUp);
+  cv.addEventListener('pointercancel',()=>{ flickStart=null; flickCur=null; });
+  // iOS Safari ignores user-scalable=no — block pinch-zoom gestures during play.
+  document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+  document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
+
+  function launchAim(){
+    let p=power;
+    if(cfg.assist){ p=p+(0.70-p)*0.3; }  // assist: nudge power so the puck reaches the gates
+    const ang=Math.max(-AIM_MAX,Math.min(AIM_MAX,lockedAngle));
+    deliver={t:0,x:ang*0.85,power:p};
+    state=ST.DELIVER; setHint('','');
+  }
+  // 플릭(에어하키) 발사 — 스와이프 방향·세기 그대로 자유롭게 굴러가며 벽에 튕김.
+  // 플릭 조준 보정(자석 효과): 착지 지점을 가장 가까운 게이트 중앙 쪽으로 끌어당김.
+  // 값이 낮을수록 그 칸은 어려움(보정이 적음), 높을수록 쉬움. 0=보정 없음, 1=완전 스냅.
+  // 칸별로 다르게 설정 — 특히 4점 칸을 가장 어렵게(0.15). (탭/참여 모드에는 전혀 영향 없음)
+  const GATE_CENTERS=[-0.75,-0.25,0.25,0.75];   // 게이트 index 순서 (gateXRange와 동일)
+  const GATE_ASSIST =[  0.30,  0.20, 0.15, 0.30];   // 2점, 3점, 4점, 1점 칸 순서
+  // 도전 모드 흔들림: 손가락을 대고 화살표를 고정해 정밀 조준해도 매번 같은 칸에 넣지
+  // 못하도록, 발사할 때 착지 지점에 무작위 편차(±값)를 준다. 클수록 어렵고 예측 불가.
+  // (0=흔들림 없음=조준대로 100% 들어감 → 4점 편법 가능. 게이트 유효폭은 ±0.075)
+  const FLICK_JITTER=0.13;
+  function launchFlick(dxs,dys){
+    let worldDX=dxs/nearHalfW; const worldDZ=dys/(nearY-farY);
+    // 스와이프가 향하는 착지 x를 계산해, 가장 가까운 게이트 칸의 보정값만큼 중앙으로 당긴 뒤 흔들림 적용
+    if(worldDZ>0){
+      let landX=(worldDX/worldDZ)*(gateZ-0.08);
+      let ni=0, bd=Infinity;
+      for(let i=0;i<GATE_CENTERS.length;i++){ const dd=Math.abs(GATE_CENTERS[i]-landX); if(dd<bd){bd=dd;ni=i;} }
+      const k=GATE_ASSIST[ni];
+      if(k>0) landX=landX+(GATE_CENTERS[ni]-landX)*k;
+      landX+=(Math.random()*2-1)*FLICK_JITTER;   // 무작위 편차 → 정밀 조준 편법 무력화
+      worldDX=(landX/(gateZ-0.08))*worldDZ;
+    }
+    const len=Math.hypot(worldDX,worldDZ)||1e-6;
+    const pw=Math.max(0.18,Math.min(1.3,len/0.35));
+    const speed=0.0085+pw*0.0125;
+    active={
+      x:0,z:0.08,
+      vx:speed*(worldDX/len), vz:speed*(worldDZ/len),
+      rot:0,rotV:(Math.random()*2-1)*0.1+(worldDX/len)*0.2,
+      resting:false,scored:false,gateIndex:-1,trail:[],
+      playerIdx:gameMode===2?currentPlayer:0
+    };
+    advancing=false; state=ST.SLIDE; setHint('','');
+  }
+  function finishDeliver(){
+    const p=deliver.power, ang=deliver.x;
+    const speed=0.0085+p*0.0125;
+    // Launch from centre and glide straight to the aimed gate, so the puck rides exactly
+    // along the guide line (targetX matches the dashed line's endpoint in draw()).
+    const targetX=Math.max(-1,Math.min(1, ang*(0.5+0.62*(gateZ-0.08)) ));
+    const slope=targetX/(gateZ-0.08);
+    active={
+      x:0,z:0.08,
+      vx:slope*speed,vz:speed,
+      rot:0,rotV:(Math.random()*2-1)*0.1+ang*0.15,
+      resting:false,scored:false,gateIndex:-1,trail:[],
+      playerIdx:gameMode===2?currentPlayer:0
+    };
+    advancing=false;
+    state=ST.SLIDE;
+  }
+
+  // ===== Physics =====
+  const FRICTION=0.985, WALL_BOUNCE=0.42, GATE_REBOUND=0.28, STOP_SPEED=0.00075;
+  function stepDisk(d,dt){
+    d.x+=d.vx*dt; d.z+=d.vz*dt;
+    const f=Math.pow(FRICTION,dt); d.vx*=f; d.vz*=f;
+    d.rot+=d.rotV*dt; d.rotV*=Math.pow(0.985,dt);
+    if(d.x<-1+diskWorldR){playBumpFeedback();d.x=-1+diskWorldR;d.vx*=-WALL_BOUNCE;d.rotV*=-0.45;}
+    if(d.x>1-diskWorldR){playBumpFeedback();d.x=1-diskWorldR;d.vx*=-WALL_BOUNCE;d.rotV*=-0.45;}
+  }
+  function checkGate(d){
+    if(d.scored) return false;
+    if(d.z>=gateZ-0.04&&d.vz>0){
+      for(let i=0;i<4;i++){
+        const [lo,hi]=gateXRange(i);
+        const cxw=(lo+hi)/2, win=GATE_OPEN_HALF-diskWorldR;
+        if(win>0&&d.x>cxw-win&&d.x<cxw+win){
+          d.scored=true; d.gateIndex=i;
+          // Hand the puck off to a smooth drop-in animation (glide to gate center, settle, sink).
+          sinkers.push({x:d.x, z:Math.max(d.z,gateZ-0.03), tx:cxw, rot:d.rot, rotV:d.rotV*0.4, pIdx:d.playerIdx||0, t:0});
+          gateCount[i]++;
+          currentTurnScored++;
+          currentTurnGates[i]=true;
+
+          // Face value now; complete sets add their bonus at turn end (authentic 슐런).
+          const pts=GATE_POINTS[i];
+          if(gameMode===2) playerScores[d.playerIdx]+=pts;
+          score+=pts;
+          updateChallengeInfo();
+          playGoalFeedback();
+          popText(`+${pts}`);
+          showCommentary({scored:true,points:pts});
+          return true;
+        }
+      }
+      playBumpFeedback(); d.vz=-Math.abs(d.vz)*GATE_REBOUND; d.vx*=0.42; d.rotV*=-0.5;
+    }
+    return false;
+  }
+  // Animate scored pucks sliding forward into the dark gate opening, where the gate hides them.
+  function updateSinkers(dt){
+    for(let i=sinkers.length-1;i>=0;i--){
+      const s=sinkers[i];
+      s.t+=0.045*dt;
+      s.x+=(s.tx-s.x)*0.22*dt;     // line up with the opening
+      s.z+=(1.02-s.z)*0.10*dt;     // glide forward into the opening (gets covered by the gate)
+      s.rot+=s.rotV*dt; s.rotV*=Math.pow(0.94,dt);
+      if(s.t>=1) sinkers.splice(i,1);
+    }
+  }
+  function physics(dt){
+    // 1) 액티브 퍽 이동 + 보드 위 기존 퍽들과 충돌
+    if(active){
+      stepDisk(active,dt);
+      if(active.trail){ active.trail.push({x:active.x,z:active.z,rot:active.rot}); if(active.trail.length>10) active.trail.shift(); }
+      for(const o of disks){
+        // Measure distance in aspect-corrected space (scale z so a z-unit ~= an x-unit physically),
+        // so contact is only registered when the pucks truly overlap, not when passing nearby in depth.
+        const dx=active.x-o.x, dzs=(active.z-o.z)*zRatio, dd=Math.hypot(dx,dzs), min=diskWorldR*2;
+        if(dd>0&&dd<min){
+          const nx=dx/dd, nz=dzs/dd, ov=min-dd;
+          active.x+=nx*ov*0.5; o.x-=nx*ov*0.5;
+          active.z+=(nz*ov*0.5)/zRatio; o.z-=(nz*ov*0.5)/zRatio;
+          const p2=(active.vx*nx+(active.vz*zRatio)*nz);
+          o.vx+=nx*p2*0.7; o.vz+=(nz*p2*0.7)/zRatio; o.rotV+=p2*0.3;
+          active.vx-=nx*p2*0.7; active.vz-=(nz*p2*0.7)/zRatio; o.resting=false;
+        }
+      }
+    }
+    // 2) 움직이는 기존 퍽들도 이동 + 게이트 통과 시 득점 (맞아 들어가기 = 컬링식)
+    for(const o of disks){
+      if(!o.resting && !o.scored){
+        stepDisk(o,dt);
+        checkGate(o);
+        if(Math.hypot(o.vx,o.vz)<STOP_SPEED) o.resting=true;
+      }
+    }
+    // 3) 득점된 퍽 제거 (싱커 애니메이션이 대신 그려짐)
+    for(let i=disks.length-1;i>=0;i--){ if(disks[i].scored) disks.splice(i,1); }
+    // 4) 액티브 퍽 게이트/경계/정지 판정
+    if(active){
+      checkGate(active);
+      if(active.z<0.02){ active.z=0.02; active.vz=Math.abs(active.vz)*0.25; }
+      if(active.scored){ active=null; }                       // 득점: 싱커가 이어받음
+      else if(Math.hypot(active.vx,active.vz)<STOP_SPEED){     // 미스: 보드에 남김
+        active.resting=true; disks.push(active); active=null;
+        popText('아깝다!'); showCommentary({scored:false});
+      }
+    }
+    // 5) 보드가 완전히 멈추면(맞아 굴러가던 퍽 포함) 다음 투구로
+    if(!active && !advancing){
+      const moving = disks.some(o=>!o.resting && !o.scored);
+      if(!moving){ advancing=true; setTimeout(()=>{ advancing=false; nextThrow(); },750); }
+    }
+  }
+
+  function popText(txt){
+    const el=document.createElement('div'); el.className='popText'; el.textContent=txt;
+    document.getElementById('app').appendChild(el);
+    setTimeout(()=>el.remove(),850);
+  }
+
+  // ===== Turn flow =====
+
+  // Begin individual throw within a player's turn (board NOT cleared)
+  function beginThrow(){
+    power=0; powDir=1; flickStart=null; flickCur=null;
+    const flick=(cfg.control===1);
+    if(flick){ state=ST.FLICK; } else { state=ST.AIM; aimAngle=0; aimDir=1; }
+    const myPucks=pucksLeft[gameMode===2?currentPlayer:0];
+    const remaining=myPucks-currentTurnThrows;
+    const main = flick ? '퍽을 위로 밀어(스와이프) 던져요' : '방향이 좋을 때 화면을 탭!';
+    if(remaining===1){
+      setHint('마지막 퍽이에요!', main);
+    } else if(gameMode===2){
+      const pName=playerNames[currentPlayer]||'P'+(currentPlayer+1);
+      setHint(pName+'의 차례', main+' · 남은 퍽 '+remaining+'개');
+    } else {
+      setHint(main, '남은 퍽: '+remaining+'개');
+    }
+    updateChallengeInfo();
+  }
+
+  // Begin a new player turn (clear board, reset counters)
+  function beginPlayerTurn(){
+    disks=[]; active=null; sinkers=[];
+    currentTurnThrows=0; currentTurnScored=0; currentTurnGates=[false,false,false,false];
+    gateCount=[0,0,0,0];
+    beginThrow();
+  }
+
+  // Called after each puck settles
+  function nextThrow(){
+    if(state===ST.BETWEEN) return;
+    currentTurnThrows++;
+    if(currentTurnThrows>=PUCKS_PER_PLAYER){   // all 10 thrown → done (no rounds, no re-throwing)
+      endPlayerTurn();
+    } else {
+      beginThrow();
+    }
+  }
+
+  function checkAllGatesBonus(){
+    // Authentic 슐런: one puck in EACH of the four gates makes a complete "set" worth double.
+    // Face values are already scored per puck, so each set just adds +10 more.
+    const sets=Math.min(...gateCount);
+    if(sets>0){
+      const bonus=sets*10;
+      if(gameMode===2) playerScores[currentPlayer]+=bonus;
+      score+=bonus;
+      setTimeout(()=>{
+        playBonusFeedback();
+        popText('세트 '+sets+'개 완성! +'+bonus);
+        speak('세트 '+sets+'개 완성, 보너스 '+bonus+'점!');
+        updateChallengeInfo();
+      },200);
+    }
+  }
+
+  function endPlayerTurn(){
+    state=ST.BETWEEN;              // 물리 루프 정지 (SLIDE로 남아 nextThrow가 재예약되는 것 방지)
+    checkAllGatesBonus();          // set bonus over this player's 10 pucks
+    updateChallengeInfo();
+    if(gameMode===1){
+      setTimeout(()=>endRound(),700);
+    } else if(currentPlayer===0){  // P1 finished 10 → hand over to P2
+      currentPlayer=1;
+      setTimeout(()=>showSwitchBanner(),700);
+    } else {                       // both finished → game over
+      setTimeout(()=>endRound(),700);
+    }
+  }
+
+  function showSwitchBanner(){
+    const pName=playerNames[currentPlayer]||'P'+(currentPlayer+1);
+    const myPucks=pucksLeft[currentPlayer];
+    document.getElementById('swName').textContent=pName;
+    document.getElementById('swName').className='sw-name'+(currentPlayer===1?' p2':'');
+    document.getElementById('swPucks').textContent='퍽 '+myPucks+'개를 던지세요';
+    document.getElementById('switchBanner').style.display='flex';
+  }
+  function hideSwitchBanner(){
+    document.getElementById('switchBanner').style.display='none';
+    beginPlayerTurn();
+  }
+
+  function endRound(){
+    state=ST.BETWEEN;
+    const el=document.getElementById('commentary');
+    if(gameMode===1){
+      el.innerHTML=`게임 종료! 총 ${score}점`; el.classList.add('show');
+      speak(`게임 종료! 총 ${score}점입니다.`);
+    } else {
+      el.innerHTML='게임 종료!'; el.classList.add('show'); speak('게임 종료!');
+    }
+    setTimeout(()=>{ el.classList.remove('show'); finishGame(); },1200);
+  }
+
+  // ===== 승리 축하 효과 (효과음 + 색종이 + 제목 팝인) =====
+  function popResultTitle(){
+    const el=document.getElementById('rTitle');
+    el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop');
+  }
+  function playVictory(win){
+    ensureAudio();
+    if(win){
+      [523,659,784,1047].forEach((f,k)=>tone(f,k*0.13,0.26,'triangle',0.11));  // 상승 팡파르
+      tone(1319,0.55,0.5,'sine',0.09);
+      playApplause();
+      if(navigator.vibrate) navigator.vibrate([60,40,60,40,140]);
+    } else {  // 무승부: 부드러운 종료음
+      tone(440,0,0.35,'sine',0.08); tone(587,0.14,0.4,'sine',0.07);
+      if(navigator.vibrate) navigator.vibrate(60);
+    }
+  }
+  function makeConfetti(colors){
+    document.querySelectorAll('.confetti-wrap').forEach(w=>w.remove());
+    const wrap=document.createElement('div'); wrap.className='confetti-wrap';
+    for(let i=0;i<100;i++){
+      const p=document.createElement('div'); p.className='confetti-pc';
+      p.style.left=(Math.random()*100)+'%';
+      p.style.background=colors[i%colors.length];
+      p.style.width=(6+Math.random()*7)+'px';
+      p.style.height=(9+Math.random()*11)+'px';
+      p.style.opacity=(0.8+Math.random()*0.2).toFixed(2);
+      p.style.setProperty('--r',(Math.random()*900-450)+'deg');
+      p.style.animation='confFall '+(2.4+Math.random()*2).toFixed(2)+'s linear '+(Math.random()*0.7).toFixed(2)+'s forwards';
+      wrap.appendChild(p);
+    }
+    document.body.appendChild(wrap);
+    setTimeout(()=>wrap.remove(),5200);
+  }
+
+  function finishGame(){
+    state=ST.BETWEEN;
+    if(gameMode===1){
+      recordScore(playerName,score);
+      document.getElementById('r2pTable').style.display='none';
+      let t,m;
+      if(score>=40){ t='🏆 오늘의 챔피언!'; m=`${score}점! 환상적인 실력이에요.`; }
+      else if(score>=26){ t='🎉 슐런 고수!'; m=`${score}점! 골고루 잘 넣었어요.`; }
+      else if(score>=13){ t='👏 슐런 도전자!'; m=`${score}점! 멋진 도전이었어요.`; }
+      else { t='😊 슐런 연습생!'; m=`${score}점. 다시 하면 더 잘할 수 있어요!`; }
+      document.getElementById('rTitle').textContent=t;
+      document.getElementById('rScoreText').textContent=`${playerName} · 최종 ${score}점 · 오늘 최고 ${bestScore}점`;
+      document.getElementById('rMsg').textContent=m;
+    } else {
+      recordScore(playerNames[0],playerScores[0]);
+      recordScore(playerNames[1],playerScores[1]);
+      const s1=playerScores[0],s2=playerScores[1];
+      const n1=playerNames[0]||'P1',n2=playerNames[1]||'P2';
+      let t;
+      if(s1>s2) t=`🏆 ${n1} 승리!`;
+      else if(s2>s1) t=`🏆 ${n2} 승리!`;
+      else t='🤝 무승부!';
+      document.getElementById('rTitle').textContent=t;
+      document.getElementById('rScoreText').textContent='';
+      document.getElementById('rMsg').textContent='수고하셨습니다!';
+      document.getElementById('r2pTable').style.display='flex';
+      document.getElementById('rP1Name').textContent=n1;
+      document.getElementById('rP1Val').textContent=s1+'점';
+      document.getElementById('rP2Name').textContent=n2;
+      document.getElementById('rP2Val').textContent=s2+'점';
+      document.getElementById('rP1Row').classList.toggle('winner',s1>=s2);
+      document.getElementById('rP2Row').classList.toggle('winner',s2>=s1);
+    }
+    document.getElementById('result').style.display='flex';
+    // 승리 축하: 팡파르 + 박수 + 색종이 + 제목 팝인 (건조한 음성 대신)
+    popResultTitle();
+    const GOLD=['#ffcf6b','#ffe58a','#e08a2d','#ffffff','#c98a3a'];
+    const BLUE=['#7ab8e8','#a9d4f5','#4a90d9','#ffffff','#2c6ab8'];
+    let win=true, colors=GOLD;
+    if(gameMode===2){
+      if(playerScores[0]===playerScores[1]) win=false;              // 무승부
+      else colors=(playerScores[0]>playerScores[1])?GOLD:BLUE;      // 승자 색
+    }
+    playVictory(win);
+    if(win) makeConfetti(colors);
+    scheduleAttract();
+  }
+
+  // ===== Drawing =====
+  function drawBoard(){
+    const nL=project(-1,0),nR=project(1,0),fL=project(-1,1),fR=project(1,1);
+    const g=ctx.createLinearGradient(0,farY,0,nearY);
+    g.addColorStop(0,'#b07d3e'); g.addColorStop(1,'#d6a35d');
+    ctx.beginPath(); ctx.moveTo(nL.sx,nL.sy); ctx.lineTo(nR.sx,nR.sy); ctx.lineTo(fR.sx,fR.sy); ctx.lineTo(fL.sx,fL.sy); ctx.closePath();
+    ctx.fillStyle=g; ctx.fill();
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(nL.sx,nL.sy); ctx.lineTo(nR.sx,nR.sy); ctx.lineTo(fR.sx,fR.sy); ctx.lineTo(fL.sx,fL.sy); ctx.closePath(); ctx.clip();
+    ctx.strokeStyle='rgba(120,75,30,.18)'; ctx.lineWidth=2;
+    for(let gx=-0.9;gx<=0.9;gx+=0.18){
+      const a=project(gx,0),b=project(gx,1);
+      ctx.beginPath(); ctx.moveTo(a.sx,a.sy); ctx.lineTo(b.sx,b.sy); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.fillStyle='#6b4521';
+    ctx.beginPath(); ctx.moveTo(nL.sx,nL.sy); ctx.lineTo(fL.sx,fL.sy); ctx.lineTo(fL.sx-8,fL.sy); ctx.lineTo(nL.sx-14,nL.sy); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(nR.sx,nR.sy); ctx.lineTo(fR.sx,fR.sy); ctx.lineTo(fR.sx+8,fR.sy); ctx.lineTo(nR.sx+14,nR.sy); ctx.closePath(); ctx.fill();
+  }
+
+  function drawGates(){
+    const wNL=project(-1,gateZ-0.02),wNR=project(1,gateZ-0.02),wFL=project(-1,1),wFR=project(1,1);
+    ctx.fillStyle='#5a3712';
+    ctx.beginPath(); ctx.moveTo(wNL.sx,wNL.sy); ctx.lineTo(wNR.sx,wNR.sy); ctx.lineTo(wFR.sx,wFR.sy); ctx.lineTo(wFL.sx,wFL.sy); ctx.closePath(); ctx.fill();
+    for(let i=0;i<4;i++){
+      const [lo,hi]=gateXRange(i), cxw=(lo+hi)/2;
+      const front=project(cxw,gateZ-0.02);
+      const fl=project(cxw-GATE_OPEN_HALF,gateZ-0.02),fr=project(cxw+GATE_OPEN_HALF,gateZ-0.02);
+      const archH=front.scale*42;
+      ctx.fillStyle='#160d05';
+      ctx.beginPath(); ctx.moveTo(fl.sx,fl.sy); ctx.lineTo(fl.sx,fl.sy-archH);
+      ctx.quadraticCurveTo(front.sx,front.sy-archH*1.7,fr.sx,fr.sy-archH); ctx.lineTo(fr.sx,fr.sy); ctx.closePath(); ctx.fill();
+      // Score panel
+      const pw=front.scale*30, panelY=front.sy-archH-front.scale*36, panelH=front.scale*32;
+      ctx.fillStyle=currentTurnGates[i]?'#2a5a2a':'#3a2410';
+      roundRect(front.sx-pw,panelY,pw*2,panelH,5); ctx.fill();
+      // One gate short of completing a set → pulse the missing one (green) to draw the eye.
+      if(!currentTurnGates[i] && currentTurnGates.filter(Boolean).length===3){
+        const pulse=0.5+0.5*Math.sin(performance.now()/160);
+        ctx.lineWidth=2+2*pulse; ctx.strokeStyle='rgba(127,255,127,'+(0.45+0.55*pulse)+')';
+        roundRect(front.sx-pw,panelY,pw*2,panelH,5); ctx.stroke();
+      }
+      ctx.fillStyle=currentTurnGates[i]?'#7fff7f':'#ffcf6b';
+      ctx.font='bold '+Math.round(front.scale*30)+'px sans-serif';
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(GATE_POINTS[i],front.sx,front.sy-archH-front.scale*20);
+      // Count dots above the number panel: one dot per puck that entered this gate this turn.
+      const cnt=gateCount[i];
+      if(cnt>0){
+        const total=Math.min(cnt,10), perRow=5;
+        const dotR=Math.max(2.5,front.scale*4.5), gap=dotR*2.4;
+        const panelTop=front.sy-archH-front.scale*36;
+        for(let k=0;k<total;k++){
+          const row=Math.floor(k/perRow), col=k-row*perRow;
+          const inRow=Math.min(total-row*perRow,perRow);
+          const dxp=(col-(inRow-1)/2)*gap;
+          const yy=panelTop-dotR-front.scale*6-row*gap;
+          ctx.beginPath(); ctx.arc(front.sx+dxp,yy,dotR,0,Math.PI*2);
+          ctx.fillStyle='#fff'; ctx.fill();
+          ctx.lineWidth=Math.max(1,front.scale*1.2); ctx.strokeStyle='rgba(80,40,10,.7)'; ctx.stroke();
+        }
+      }
+    }
+    ctx.fillStyle='#6b4521';
+    for(let i=0;i<=4;i++){
+      const gx=-1+i*0.5, a=project(gx,gateZ-0.02), archH=a.scale*46;
+      ctx.fillRect(a.sx-3,a.sy-archH,6,archH);
+    }
+  }
+
+  function drawDisk3D(x,z,rot,boost=1,alpha=1,pIdx=0){
+    const pal=PAL[pIdx]||PAL[0], p=project(x,z);
+    const rW=diskWorldR*p.scale*nearHalfW*boost, rH=rW*0.55;
+    ctx.save(); ctx.globalAlpha=alpha; ctx.translate(p.sx,p.sy);
+    ctx.beginPath(); ctx.ellipse(2,rH*0.4,rW*1.05,rH*0.6,0,0,Math.PI*2); ctx.fillStyle='rgba(0,0,0,.28)'; ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0,rH*0.25,rW,rH,0,0,Math.PI*2); ctx.fillStyle=pal.side; ctx.fill();
+    ctx.save(); ctx.scale(1,rH/rW); ctx.rotate(rot);
+    const g=ctx.createRadialGradient(-rW*0.3,-rW*0.3,rW*0.2,0,0,rW);
+    g.addColorStop(0,pal.t1); g.addColorStop(0.7,pal.t2); g.addColorStop(1,pal.t3);
+    ctx.beginPath(); ctx.arc(0,0,rW,0,Math.PI*2); ctx.fillStyle=g; ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle=pal.side; ctx.stroke();
+    const gl=ctx.createRadialGradient(-rW*0.25,-rW*0.25,0,0,0,rW*0.7);
+    gl.addColorStop(0,pal.hi); gl.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=gl; ctx.beginPath(); ctx.arc(0,0,rW,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0,0,rW*0.3,0,Math.PI*2); ctx.fillStyle=pal.hole; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-rW*0.7,0); ctx.lineTo(rW*0.7,0); ctx.strokeStyle=pal.grain; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.restore(); ctx.restore();
+    return p;
+  }
+
+  function drawPushingHand(){
+    const t=deliver.t, z=0.03+t*0.10, x=0;   // push straight from centre; slide adds the angle
+    const pIdx=gameMode===2?currentPlayer:0;
+    const p=drawDisk3D(x,z,t*0.5,1.2,1,pIdx);
+    if(t<0.8){
+      const hx=p.sx,hy=p.sy+p.scale*30,sc=Math.max(p.scale,0.6);
+      ctx.save();
+      ctx.strokeStyle='#e8b98f'; ctx.lineWidth=15*sc; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(hx,hy+70); ctx.lineTo(hx,hy+8); ctx.stroke();
+      ctx.strokeStyle='#9c5a2a'; ctx.lineWidth=20*sc;
+      ctx.beginPath(); ctx.moveTo(hx,hy+108); ctx.lineTo(hx,hy+62); ctx.stroke();
+      const hw=16*sc,hh=14*sc;
+      ctx.fillStyle='#f0c69a';
+      roundRect(hx-hw,hy-hh,hw*2,hh*1.7,7); ctx.fill();
+      ctx.strokeStyle='#d9a877'; ctx.lineWidth=1.5; ctx.stroke();
+      ctx.strokeStyle='rgba(200,150,110,.5)'; ctx.lineWidth=1.2;
+      for(let g=-1;g<=1;g++){ ctx.beginPath(); ctx.moveTo(hx+g*6*sc,hy-hh+3); ctx.lineTo(hx+g*6*sc,hy+hh*0.5); ctx.stroke(); }
+      for(let f=0;f<4;f++){
+        roundRect(hx-hw+f*(hw*2/4)+2,hy-hh-hh*0.75,hw*2/4-3,hh*0.95,4);
+        ctx.fillStyle='#f0c69a'; ctx.fill(); ctx.strokeStyle='#d9a877'; ctx.stroke();
+      }
+      roundRect(hx-hw-5*sc,hy-hh*0.3,7*sc,hh*1.1,4);
+      ctx.fillStyle='#f0c69a'; ctx.fill(); ctx.stroke();
+      ctx.restore();
+    } else {
+      ctx.strokeStyle='rgba(180,110,40,.6)'; ctx.lineWidth=2;
+      for(let i=0;i<3;i++){ const yy=p.sy+p.scale*(18+i*9); ctx.beginPath(); ctx.moveTo(p.sx-12,yy); ctx.lineTo(p.sx-32,yy); ctx.stroke(); }
+    }
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#2a1a0d'; ctx.fillRect(0,0,W,H);
+    drawBoard();
+    // Draw scored pucks BEFORE the gates so they slide into the dark opening and vanish behind it.
+    for(const s of sinkers){
+      let alpha=1; if(s.t>0.8) alpha=1-(s.t-0.8)/0.2;
+      drawDisk3D(s.x,s.z,s.rot,1,Math.max(0,alpha),s.pIdx);
+    }
+    drawGates();
+    const sL=project(-1,0.05),sR=project(1,0.05);
+    ctx.strokeStyle='rgba(107,69,33,.5)'; ctx.lineWidth=3; ctx.setLineDash([8,8]);
+    ctx.beginPath(); ctx.moveTo(sL.sx,sL.sy); ctx.lineTo(sR.sx,sR.sy); ctx.stroke(); ctx.setLineDash([]);
+
+    const sorted=[...disks].sort((a,b)=>b.z-a.z);
+    for(const d of sorted) drawDisk3D(d.x,d.z,d.rot,1,1,d.playerIdx||0);
+
+    if(state===ST.SLIDE&&active){
+      const spd=Math.hypot(active.vx,active.vz);
+      if(active.trail&&spd>STOP_SPEED*3){
+        const n=active.trail.length;
+        for(let i=0;i<n;i++){ const tr=active.trail[i]; drawDisk3D(tr.x,tr.z,tr.rot,1.1,0.04+0.16*(i/n),active.playerIdx||0); }
+      }
+      drawDisk3D(active.x,active.z,active.rot,1.1,1,active.playerIdx||0);
+    }
+    if(state===ST.DELIVER) drawPushingHand();
+
+    if(state===ST.AIM || state===ST.POWER){
+      const pIdx=gameMode===2?currentPlayer:0;
+      const ang=(state===ST.POWER)?lockedAngle:aimAngle;
+      const pz=0.06;
+      // Guide line + arrow head — only this sweeps left/right; the puck stays centered.
+      // Runs the full board and ends exactly on the gate the puck will enter, so where the
+      // dashed line points is truly where the puck lands (same math as finishDeliver's slide).
+      const landX=Math.max(-1,Math.min(1, ang*0.85*(0.5+0.62*(gateZ-0.08)) ));
+      const start=project(0,pz), end=project(landX,gateZ-0.03);
+      const col=(state===ST.POWER)?'rgba(255,207,107,.95)':'rgba(220,120,40,.95)';
+      ctx.setLineDash([10,10]); ctx.strokeStyle=col; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.moveTo(start.sx,start.sy); ctx.lineTo(end.sx,end.sy); ctx.stroke(); ctx.setLineDash([]);
+      const a=Math.atan2(end.sy-start.sy,end.sx-start.sx);
+      ctx.fillStyle=col;
+      ctx.beginPath(); ctx.moveTo(end.sx,end.sy);
+      ctx.lineTo(end.sx-15*Math.cos(a-0.4),end.sy-15*Math.sin(a-0.4));
+      ctx.lineTo(end.sx-15*Math.cos(a+0.4),end.sy-15*Math.sin(a+0.4));
+      ctx.closePath(); ctx.fill();
+      // Power gauge (only while filling)
+      if(state===ST.POWER){
+        const gx=W*0.5-100, gy=nearY-30, gw=200, gh=18;
+        roundRect(gx-4,gy-4,gw+8,gh+8,10); ctx.fillStyle='rgba(20,12,5,.85)'; ctx.fill();
+        const gr=ctx.createLinearGradient(gx,0,gx+gw,0);
+        gr.addColorStop(0,'#4caf50'); gr.addColorStop(0.55,'#ffcf6b'); gr.addColorStop(1,'#e0562d');
+        roundRect(gx,gy,gw*power,gh,7); ctx.fillStyle=gr; ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='bold 12px sans-serif';
+        ctx.textAlign='center'; ctx.fillText('세기 '+Math.round(power*100)+'%',W*0.5,gy-8);
+        ctx.textAlign='left';
+      }
+      drawDisk3D(0,pz,0,1.2,1,pIdx);
+    }
+
+    if(state===ST.FLICK){
+      const pIdx=gameMode===2?currentPlayer:0;
+      const p=project(0,0.06);
+      if(flickStart && flickCur){
+        const dxs=flickCur.x-flickStart.x, dys=flickCur.y-flickStart.y;   // dys<0 = 위로(전방)
+        if(dys < -8){
+          const mag=Math.min(1,Math.hypot(dxs,dys)/(H*0.28)), ang=Math.atan2(dys,dxs);
+          const L=55+mag*130, ex=p.sx+Math.cos(ang)*L, ey=p.sy+Math.sin(ang)*L;
+          ctx.setLineDash([9,9]); ctx.strokeStyle='rgba(255,207,107,.95)'; ctx.lineWidth=4;
+          ctx.beginPath(); ctx.moveTo(p.sx,p.sy); ctx.lineTo(ex,ey); ctx.stroke(); ctx.setLineDash([]);
+          ctx.fillStyle='rgba(255,207,107,.95)';
+          ctx.beginPath(); ctx.moveTo(ex,ey);
+          ctx.lineTo(ex-15*Math.cos(ang-0.4),ey-15*Math.sin(ang-0.4));
+          ctx.lineTo(ex-15*Math.cos(ang+0.4),ey-15*Math.sin(ang+0.4));
+          ctx.closePath(); ctx.fill();
+          ctx.fillStyle='rgba(255,255,255,.85)'; ctx.font='bold 12px sans-serif'; ctx.textAlign='center';
+          ctx.fillText('세기 '+Math.round(mag*100)+'%', p.sx, p.sy+34); ctx.textAlign='left';
+        }
+      }
+      drawDisk3D(0,0.06,0,1.2,1,pIdx);
+    }
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath();
+  }
+
+  // ===== Loop =====
+  const STOP_SPEED_CONST=0.00075;
+  let _last=0;
+  function update(now){
+    if(!_last) _last=now;
+    let dt=(now-_last)/16.667; _last=now;
+    if(dt>2) dt=2; if(dt<0) dt=0;
+    const swMult=SWEEP_MULT[cfg.diff]||1;
+    if(state===ST.AIM){          // aim line auto-sweeps left/right
+      aimAngle+=aimDir*AIM_SCAN*swMult*dt;
+      if(aimAngle>AIM_MAX){aimAngle=AIM_MAX;aimDir=-1;}
+      if(aimAngle<-AIM_MAX){aimAngle=-AIM_MAX;aimDir=1;}
+    } else if(state===ST.POWER){ // power gauge auto-fills up and down
+      power+=powDir*POW_SCAN*swMult*dt;
+      if(power>1){power=1;powDir=-1;}
+      if(power<0.05){power=0.05;powDir=1;}
+    } else if(state===ST.DELIVER){ deliver.t+=0.04*dt; if(deliver.t>=1) finishDeliver(); }
+    else if(state===ST.SLIDE){ physics(dt); }
+    if(sinkers.length) updateSinkers(dt);
+    draw();
+    requestAnimationFrame(update);
+  }
+
+  // ===== Options (게임 모드만 선택; 난이도·도움·피드백은 고정값) =====
+  document.querySelectorAll('#modeRow .opt-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('#modeRow .opt-btn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel');
+      gameMode=parseInt(b.dataset.mode);
+      const is2p=gameMode===2;
+      document.getElementById('p2Group').style.display=is2p?'':'none';
+      document.getElementById('p1Label').textContent=is2p?'1번 참가자 이름':'참가자 이름';
+      document.getElementById('rulesTitle').textContent=is2p?'2인용 · 퍽 10개씩':'1인용 · 퍽 10개';
+      document.getElementById('rulesList').innerHTML=is2p
+        ?'<li>각자 <b>퍽 10개</b>를 던져 최종 점수로 겨뤄요.</li><li>한 사람이 10개를 다 던진 뒤 교대합니다.</li><li>칸 숫자대로 득점 · <b>네 칸 골고루 한 세트면 20점!</b></li><li>P1 🟡 황금색, P2 🔵 파란색 퍽 · <b>몰아넣기보다 골고루!</b></li>'
+        :'<li><b>탭</b>으로 방향을 맞추고, <b>다시 탭</b>으로 세기를 정해 발사해요.</li><li><b>퍽 10개</b>를 모두 던지면 최종 점수가 나와요.</li><li>칸 숫자대로 득점 · <b>네 칸 골고루 한 세트면 20점!</b></li><li>한 칸에 몰아넣기보다 <b>골고루 분배</b>가 유리해요.</li>';
+      document.getElementById('startBtn').textContent=is2p?'2인용 게임 시작':'1인용 게임 시작';
+    });
+  });
+  // 조작 방식 (탭 / 플릭)
+  document.querySelectorAll('#controlRow .opt-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      document.querySelectorAll('#controlRow .opt-btn').forEach(x=>x.classList.remove('sel'));
+      b.classList.add('sel'); cfg.control=parseInt(b.dataset.control);
+    });
+  });
+
+  // ===== Wake Lock =====
+  let wakeLock=null;
+  async function requestWakeLock(){ try{ if('wakeLock' in navigator) wakeLock=await navigator.wakeLock.request('screen'); }catch(e){} }
+  document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible') requestWakeLock(); });
+
+  // ===== Attract =====
+  let attractTimer=null;
+  function scheduleAttract(){ clearTimeout(attractTimer); attractTimer=setTimeout(returnToStart,25000); }
+  function cancelAttract(){ clearTimeout(attractTimer); attractTimer=null; }
+  function returnToStart(){
+    cancelAttract();
+    document.getElementById('result').style.display='none';
+    document.getElementById('switchBanner').style.display='none';
+    document.getElementById('overlay').style.display='flex';
+    state=ST.BETWEEN;
+  }
+
+  // ===== Start =====
+  function startGame(){
+    ensureAudio(); cancelAttract(); requestWakeLock();
+    const ni=document.getElementById('nameInput'), ni2=document.getElementById('nameInput2');
+    if(gameMode===1){
+      playerName=(ni&&ni.value.trim())?ni.value.trim().slice(0,8):'익명';
+      playerNames=[playerName,''];
+    } else {
+      playerNames[0]=(ni&&ni.value.trim())?ni.value.trim().slice(0,8):'P1';
+      playerNames[1]=(ni2&&ni2.value.trim())?ni2.value.trim().slice(0,8):'P2';
+      playerName=playerNames[0];
+    }
+    document.getElementById('overlay').style.display='none';
+    document.getElementById('result').style.display='none';
+    document.getElementById('switchBanner').style.display='none';
+
+    score=0; playerScores=[0,0];
+    pucksLeft=[PUCKS_PER_PLAYER,PUCKS_PER_PLAYER];
+    currentPlayer=0;
+    currentTurnThrows=0; currentTurnScored=0; currentTurnGates=[false,false,false,false];
+    disks=[]; active=null; sinkers=[]; gateCount=[0,0,0,0];
+    document.getElementById('ci-round').style.display='none';   // no rounds anymore
+
+    // UI visibility
+    if(gameMode===1){
+      document.getElementById('sb-1p').style.display='';
+      document.getElementById('sb-2p').style.display='none';
+      document.getElementById('lbOverlay').style.display='';
+      document.getElementById('ci-player').style.display='none';
+      document.getElementById('ci-best').style.display='';
+    } else {
+      document.getElementById('sb-1p').style.display='none';
+      document.getElementById('sb-2p').style.display='flex';
+      document.getElementById('lbOverlay').style.display='none';
+      document.getElementById('ci-player').style.display='';
+      document.getElementById('ci-best').style.display='none';
+    }
+
+    document.getElementById('sb-rounds').textContent='';
+    updateChallengeInfo();
+
+    if(gameMode===1){
+      speak(`${playerName}님, 슐런을 시작합니다. 퍽 10개로 최고점수를 노려보세요!`);
+      beginPlayerTurn();
+    } else {
+      speak(`${playerNames[0]}님 대 ${playerNames[1]}님, 2인용 게임 시작! ${playerNames[0]}님부터 시작합니다.`);
+      beginPlayerTurn();
+    }
+  }
+
+  document.getElementById('startBtn').addEventListener('click',startGame);
+  document.getElementById('startBtn2').addEventListener('click',()=>{
+    cancelAttract();
+    document.getElementById('overlay').style.display='flex';
+    document.getElementById('result').style.display='none';
+  });
+
+  renderLeaderboard();
+  updateChallengeInfo();
+  resize();
+  requestAnimationFrame(update);
+})();
+</script>
+</body>
+</html>
