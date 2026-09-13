@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자료 올리기 · 특수교육 AI 도구함</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A7%B0%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --ink:#1e2230; --mut:#666d82; --dim:#99a0b3;
+    --surface:#fff; --surface-2:#f6f7fb;
+    --line:rgba(24,30,60,.09); --line-2:rgba(24,30,60,.05);
+    --blue:#3b63e8; --blue-d:#2b4dcc; --blue-soft:#e9eefd;
+    --coral:#ef6f45; --coral-d:#d4552c; --coral-soft:#fdeae2;
+    --ok:#0f9a6a; --ok-soft:#e4f6ef;
+    --sh:0 1px 2px rgba(28,34,70,.04), 0 8px 26px rgba(28,34,70,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ink:#e8ebf3; --mut:#a6adc0; --dim:#7d8497; --surface:#1d2029; --surface-2:#23262f;
+      --line:rgba(255,255,255,.10); --line-2:rgba(255,255,255,.06);
+      --blue:#7d9bff; --blue-d:#a8bcff; --blue-soft:#232c48;
+      --coral:#ff8a63; --coral-d:#ffa585; --coral-soft:#3a2720;
+      --ok:#4ad3a0; --ok-soft:#183028;
+      --sh:0 1px 2px rgba(0,0,0,.4), 0 8px 26px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; color:var(--ink); font-size:16px; line-height:1.6;
+    font-family:"Pretendard","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    background:linear-gradient(165deg,#eceffb,#f3f0fa 46%,#fdf1ec); background-attachment:fixed; min-height:100vh;
+  }
+  @media (prefers-color-scheme:dark){ body{background:linear-gradient(165deg,#14161d,#171820 46%,#1c1a1e); background-attachment:fixed} }
+  .wrap{max-width:780px; margin:0 auto; padding:26px 18px 70px}
+  a{color:var(--blue-d)}
+  h1{font-size:1.42rem; font-weight:800; letter-spacing:-.02em; margin:0 0 6px}
+  .lead{color:var(--mut); font-size:.95rem; margin:0 0 22px}
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:22px; box-shadow:var(--sh); margin-bottom:18px}
+  .card h2{font-size:1rem; font-weight:800; margin:0 0 4px}
+  .card h2 + p{color:var(--dim); font-size:.86rem; margin:0 0 16px}
+  label{display:block; font-size:.85rem; font-weight:700; margin-bottom:6px}
+  .req{color:var(--coral-d)}
+  input[type=text],input[type=password],select,textarea{
+    width:100%; font:inherit; color:inherit; background:var(--surface-2);
+    border:1px solid var(--line); border-radius:11px; padding:11px 13px; outline:0;
+  }
+  input:focus,select:focus,textarea:focus{border-color:var(--blue); box-shadow:0 0 0 3px var(--blue-soft); background:var(--surface)}
+  textarea{resize:vertical; min-height:86px; line-height:1.6}
+  .fld{margin-bottom:16px}
+  .hint{font-size:.79rem; color:var(--dim); margin-top:5px}
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:14px}
+  .three{display:grid; grid-template-columns:repeat(3,1fr); gap:14px}
+  .checks{display:flex; gap:9px; flex-wrap:wrap}
+  .checks label{display:inline-flex; align-items:center; gap:7px; font-weight:600; font-size:.88rem;
+    background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:8px 14px; margin:0; cursor:pointer}
+  .checks input{accent-color:var(--blue)}
+  .drop{
+    border:2px dashed var(--line); border-radius:14px; padding:26px; text-align:center; cursor:pointer;
+    background:var(--surface-2); transition:.14s;
+  }
+  .drop:hover,.drop.on{border-color:var(--blue); background:var(--blue-soft)}
+  .drop b{display:block; font-size:.96rem; margin-bottom:4px}
+  .drop span{font-size:.83rem; color:var(--dim)}
+  .picked{display:flex; align-items:center; gap:10px; background:var(--ok-soft); border-radius:12px; padding:12px 14px; font-size:.9rem; font-weight:600}
+  .agree{display:flex; gap:11px; align-items:flex-start; background:var(--coral-soft); border-radius:13px; padding:15px 16px}
+  .agree input{margin-top:4px; accent-color:var(--coral); flex-shrink:0; width:17px; height:17px}
+  .agree label{font-weight:600; font-size:.88rem; margin:0; color:var(--coral-d); line-height:1.6}
+  .btn{border:1px solid var(--line); background:var(--surface); border-radius:12px; padding:12px 18px;
+    cursor:pointer; font-size:.94rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:8px}
+  .btn.pri{background:var(--blue); border-color:var(--blue); color:#fff}
+  .btn:disabled{opacity:.5; cursor:not-allowed}
+  .bar{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+  .msg{margin-top:14px; padding:13px 15px; border-radius:12px; font-size:.9rem; font-weight:600; display:none}
+  .msg.err{display:block; background:var(--coral-soft); color:var(--coral-d)}
+  .msg.ok{display:block; background:var(--ok-soft); color:var(--ok)}
+  .done{text-align:center; padding:36px 20px}
+  .done .big{font-size:2.6rem; margin-bottom:10px}
+  @media (max-width:560px){ .two,.three{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <p style="margin:0 0 14px"><a href="index.html">← 도구함으로 돌아가기</a></p>
+  <h1>자료 올리기</h1>
+  <p class="lead">만드신 웹 수업자료를 함께 나눠 주세요. 확인 절차를 거친 뒤 도구함 목록에 올라갑니다.</p>
+
+  <form id="form">
+
+    <div class="card">
+      <h2>업로드 암호</h2>
+      <p>연수나 실천 나눔단에서 안내받은 암호를 입력해 주세요.</p>
+      <div class="fld" style="margin:0">
+        <input type="password" id="key" autocomplete="off" placeholder="암호" required>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>자료 파일 <span class="req">*</span></h2>
+      <p>파일 하나로 동작하는 HTML 자료만 올릴 수 있습니다. 400KB 이하.</p>
+      <div class="drop" id="drop" tabindex="0" role="button">
+        <b>파일을 여기에 끌어다 놓거나 눌러서 선택</b>
+        <span>확장자 .html 또는 .htm</span>
+      </div>
+      <input type="file" id="file" accept=".html,.htm,text/html" hidden>
+      <div class="picked" id="picked" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <h2>자료 정보</h2>
+      <p>목록 카드에 그대로 표시됩니다.</p>
+
+      <div class="fld">
+        <label for="name">자료명 <span class="req">*</span></label>
+        <input type="text" id="name" maxlength="60" required placeholder="예: 우리 반 시간표 짜기">
+      </div>
+
+      <div class="fld">
+        <label for="summary">한 줄 설명 <span class="req">*</span></label>
+        <input type="text" id="summary" maxlength="160" required placeholder="예: 그림 카드를 끌어다 놓아 하루 일과를 계획하는 활동">
+      </div>
+
+      <div class="three">
+        <div class="fld">
+          <label for="subject">교과</label>
+          <input type="text" id="subject" list="dl-sub" maxlength="20" placeholder="예: 일상생활">
+          <datalist id="dl-sub">
+            <option>국어</option><option>사회</option><option>수학</option><option>과학</option>
+            <option>음악</option><option>미술</option><option>체육</option>
+            <option>일상생활</option><option>진로와 직업</option><option>정보통신활용</option>
+            <option>실용공예</option><option>공통</option>
+          </datalist>
+        </div>
+        <div class="fld">
+          <label for="grade">학년</label>
+          <select id="grade">
+            <option>공통</option><option>초등</option><option>중학</option><option>고등</option><option>전공과</option>
+          </select>
+        </div>
+        <div class="fld">
+          <label for="form">형태</label>
+          <input type="text" id="form" list="dl-form" maxlength="20" placeholder="예: 보드게임">
+          <datalist id="dl-form">
+            <option>보드게임</option><option>퀴즈</option><option>복습 게임</option><option>아케이드</option>
+            <option>동기유발</option><option>단계별 학습</option><option>활동 보조</option><option>기타</option>
+          </datalist>
+        </div>
+      </div>
+
+      <div class="two">
+        <div class="fld">
+          <label for="players">인원</label>
+          <input type="text" id="players" maxlength="20" placeholder="예: 2~6명">
+        </div>
+        <div class="fld">
+          <label for="minutes">소요 시간</label>
+          <input type="text" id="minutes" maxlength="20" placeholder="예: 10~15분">
+        </div>
+      </div>
+
+      <div class="fld">
+        <label>필요 환경</label>
+        <div class="checks">
+          <label><input type="checkbox" class="dev" value="터치" checked>터치</label>
+          <label><input type="checkbox" class="dev" value="소리">소리</label>
+          <label><input type="checkbox" class="dev" value="마이크">마이크</label>
+          <label><input type="checkbox" class="dev" value="카메라">카메라</label>
+          <label><input type="checkbox" class="dev" value="키보드">키보드</label>
+        </div>
+      </div>
+
+      <div class="fld" style="margin:0">
+        <label for="tags">키워드</label>
+        <input type="text" id="tags" maxlength="120" placeholder="쉼표로 구분. 예: 시간표, 계획하기, 자기결정">
+        <div class="hint">검색에 함께 걸립니다. 3개에서 5개를 권합니다.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>수업 활용</h2>
+      <p>비워 두셔도 됩니다. 적어 주시면 다른 선생님이 바로 쓰기 좋습니다.</p>
+
+      <div class="fld">
+        <label for="howto">이렇게 씁니다</label>
+        <textarea id="howto" maxlength="400" placeholder="한 줄에 하나씩 적어 주세요&#10;예: 그림 카드를 순서대로 끌어다 놓기&#10;예: 완성한 일과를 소리로 읽어 주기"></textarea>
+      </div>
+
+      <div class="fld" style="margin:0">
+        <label for="support">참여와 지원 방법</label>
+        <textarea id="support" maxlength="300" placeholder="예: 소근육 사용이 어려운 학생은 터치 영역이 커서 손등으로도 조작 가능"></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>제작 프롬프트</h2>
+      <p>생성형 AI로 만드셨다면 사용한 프롬프트를 붙여넣어 주세요. 다른 선생님이 우리 반에 맞게 다시 만들 수 있습니다.</p>
+      <textarea id="prompt" maxlength="20000" style="min-height:150px" placeholder="자료를 만들 때 쓴 프롬프트를 그대로 붙여넣어 주세요"></textarea>
+    </div>
+
+    <div class="card">
+      <h2>공개 전 확인</h2>
+      <p>도구함은 누구나 볼 수 있는 공개 사이트입니다.</p>
+      <div class="agree">
+        <input type="checkbox" id="consent" required>
+        <label for="consent">
+          이 자료에는 학생의 얼굴 사진, 이름, 목소리, 활동 결과물 등 개인을 알아볼 수 있는 정보가 들어 있지 않음을 확인합니다.
+          타인의 저작물을 무단으로 포함하지 않았음도 함께 확인합니다.
+        </label>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="fld">
+        <label for="uploader">올린 사람 <span class="req">*</span></label>
+        <input type="text" id="uploader" maxlength="30" required placeholder="예: 경산자인학교 김OO">
+        <div class="hint">자료 출처로 표시됩니다. 실명 대신 학교명과 성만 적으셔도 됩니다.</div>
+      </div>
+      <div class="bar">
+        <button type="submit" class="btn pri" id="send">자료 올리기</button>
+        <a class="btn" href="index.html">취소</a>
+      </div>
+      <div class="msg" id="msg"></div>
+    </div>
+
+  </form>
+
+  <div class="card done" id="done" style="display:none">
+    <div class="big">✅</div>
+    <h2 style="font-size:1.15rem">접수되었습니다</h2>
+    <p style="color:var(--mut); font-size:.92rem">관리자가 내용을 확인한 뒤 도구함 목록에 올립니다.<br>보통 며칠 안에 반영됩니다.</p>
+    <div class="bar" style="justify-content:center; margin-top:16px">
+      <a class="btn pri" href="index.html">도구함으로 가기</a>
+      <button class="btn" type="button" id="again">다른 자료 더 올리기</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+var fileEl = document.getElementById("file"),
+    drop   = document.getElementById("drop"),
+    picked = document.getElementById("picked"),
+    msg    = document.getElementById("msg"),
+    form   = document.getElementById("form"),
+    send   = document.getElementById("send");
+var htmlText = "", fileName = "";
+var MAX = 400 * 1024;
+
+function show(kind, text){ msg.className = "msg " + kind; msg.textContent = text; }
+function clearMsg(){ msg.className = "msg"; msg.textContent = ""; }
+
+drop.onclick = function(){ fileEl.click(); };
+drop.onkeydown = function(e){ if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileEl.click(); } };
+["dragenter","dragover"].forEach(function(t){
+  drop.addEventListener(t, function(e){ e.preventDefault(); drop.classList.add("on"); });
+});
+["dragleave","drop"].forEach(function(t){
+  drop.addEventListener(t, function(e){ e.preventDefault(); drop.classList.remove("on"); });
+});
+drop.addEventListener("drop", function(e){
+  if (e.dataTransfer.files && e.dataTransfer.files[0]) take(e.dataTransfer.files[0]);
+});
+fileEl.onchange = function(){ if (fileEl.files[0]) take(fileEl.files[0]); };
+
+function take(f){
+  clearMsg();
+  if (!/\.html?$/i.test(f.name)) { show("err", "HTML 파일만 올릴 수 있습니다."); return; }
+  if (f.size > MAX) { show("err", "파일이 너무 큽니다. 400KB 이하만 올릴 수 있습니다. 큰 자료는 관리자에게 직접 전달해 주세요."); return; }
+  var r = new FileReader();
+  r.onload = function(){
+    htmlText = String(r.result || "");
+    fileName = f.name;
+    picked.style.display = "flex";
+    picked.textContent = "📄 " + f.name + "  (" + Math.max(1, Math.round(f.size/1024)) + "KB)";
+    drop.querySelector("b").textContent = "다른 파일로 바꾸려면 다시 누르세요";
+    var nm = document.getElementById("name");
+    if (!nm.value) nm.value = f.name.replace(/\.html?$/i, "").replace(/[_-]+/g, " ").slice(0, 60);
+  };
+  r.onerror = function(){ show("err", "파일을 읽지 못했습니다."); };
+  r.readAsText(f, "utf-8");
+}
+
+function lines(id, max){
+  return String(document.getElementById(id).value || "")
+    .split("\n").map(function(s){ return s.trim(); }).filter(Boolean).slice(0, max);
+}
+
+form.onsubmit = function(e){
+  e.preventDefault();
+  clearMsg();
+  if (!htmlText) { show("err", "자료 파일을 선택해 주세요."); return; }
+  if (!document.getElementById("consent").checked) { show("err", "개인정보 확인란에 동의해 주세요."); return; }
+
+  var payload = {
+    key: document.getElementById("key").value,
+    html: htmlText,
+    filename: fileName,
+    name: document.getElementById("name").value,
+    summary: document.getElementById("summary").value,
+    uploader: document.getElementById("uploader").value,
+    subject: document.getElementById("subject").value,
+    grade: document.getElementById("grade").value,
+    form: document.getElementById("form").value,
+    players: document.getElementById("players").value,
+    minutes: document.getElementById("minutes").value,
+    tags: document.getElementById("tags").value,
+    device: [].slice.call(document.querySelectorAll(".dev:checked")).map(function(c){ return c.value; }),
+    howto: lines("howto", 5),
+    support: document.getElementById("support").value,
+    prompt: document.getElementById("prompt").value,
+    consent: true
+  };
+
+  send.disabled = true; send.textContent = "올리는 중";
+  fetch("/api/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  })
+  .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, j:j }; }); })
+  .then(function(res){
+    if (!res.ok) { show("err", (res.j && res.j.error) || "올리지 못했습니다."); return; }
+    form.style.display = "none";
+    document.getElementById("done").style.display = "block";
+    window.scrollTo(0, 0);
+  })
+  .catch(function(){ show("err", "연결에 실패했습니다. 잠시 후 다시 시도해 주세요."); })
+  .finally(function(){ send.disabled = false; send.textContent = "자료 올리기"; });
+};
+
+document.getElementById("again").onclick = function(){ location.reload(); };
+})();
+</script>
+</body>
+</html>
