@@ -119,6 +119,7 @@
 | `name` | 화면에 보이는 자료명 |
 | `file` | `apps/파일명.html`. 파일을 제공하지 않으면 `null` |
 | `downloadable` | 실행과 내려받기 버튼 표시 여부 |
+| `external` | `true`면 내려받기 버튼을 숨김. `file`에 외부 주소를 넣는 자료용 |
 | `subject` `grade` `form` | 필터 기준. 교과, 학년, 형태 |
 | `device` | 필요 환경 배열. 예 `["터치","마이크","소리"]` |
 | `players` `minutes` | 인원과 소요 시간 |
