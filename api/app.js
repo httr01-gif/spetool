@@ -2,10 +2,10 @@
 // /api/app?id=uXXXX        → 브라우저에서 실행
 // /api/app?id=uXXXX&dl=1   → 파일로 내려받기
 
-const { cmd, allEntries, hasStore, htmlKey } = require('./_store.js');
+const { cmd, allEntries, getQuery, hasStore, htmlKey } = require('./_store.js');
 
 module.exports = async (req, res) => {
-  const q = req.query || {};
+  const q = getQuery(req);
   const id = String(q.id || '');
 
   if (!hasStore() || !/^[A-Za-z0-9_-]{4,40}$/.test(id)) {

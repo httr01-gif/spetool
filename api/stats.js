@@ -28,16 +28,26 @@ function esc(s) {
   return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 }
 
+const { getQuery, normKey, keyMatches } = require('./_store.js');
+
 module.exports = async (req, res) => {
   const key = process.env.STATS_KEY;
-  const q = req.query || {};
+  const q = getQuery(req);
 
   if (!key) {
     res.status(503).json({ error: 'STATS_KEY 환경변수가 설정되지 않았습니다.' });
     return;
   }
-  if (q.key !== key) {
-    res.status(401).json({ error: '접근 권한이 없습니다.' });
+  if (!keyMatches(q.key, key)) {
+    res.status(401).json({
+      error: '접근 권한이 없습니다.',
+      // 값은 알려 주지 않고 길이만 비교해 원인을 찾도록 돕는다
+      hint: {
+        입력한_열쇠_글자수: normKey(q.key).length,
+        등록된_열쇠_글자수: normKey(key).length,
+        주소에서_key를_읽었는지: q.key != null,
+      },
+    });
     return;
   }
   if (!redisEnv()) {

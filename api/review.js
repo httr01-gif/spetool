@@ -3,7 +3,7 @@
 // GET  /api/review?key=...&id=..&raw=1 → 해당 자료의 HTML 원문 미리보기
 // POST /api/review  {key,id,action}    → approve | reject | delete
 
-const { cmd, allEntries, parseBody, hasStore, LIST_KEY, htmlKey } = require('./_store.js');
+const { cmd, allEntries, parseBody, getQuery, keyMatches, hasStore, LIST_KEY, htmlKey } = require('./_store.js');
 
 module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
@@ -12,10 +12,10 @@ module.exports = async (req, res) => {
   if (!key) { res.status(503).json({ error: 'STATS_KEY 환경변수가 설정되지 않았습니다.' }); return; }
   if (!hasStore()) { res.status(503).json({ error: '저장소가 연결되지 않았습니다.' }); return; }
 
-  const q = req.query || {};
+  const q = getQuery(req);
   const body = req.method === 'POST' ? parseBody(req) : {};
-  const given = String(q.key || body.key || '');
-  if (given !== key) { res.status(401).json({ error: '접근 권한이 없습니다.' }); return; }
+  const given = q.key || body.key || '';
+  if (!keyMatches(given, key)) { res.status(401).json({ error: '접근 권한이 없습니다.' }); return; }
 
   try {
     if (req.method === 'GET') {

@@ -52,6 +52,31 @@ function parseBody(req) {
   return b && typeof b === 'object' ? b : {};
 }
 
+// req.query 가 없는 실행 환경을 대비해 주소에서 직접 읽어 온다
+function getQuery(req) {
+  const out = {};
+  if (req.query && typeof req.query === 'object') {
+    for (const [k, v] of Object.entries(req.query)) out[k] = Array.isArray(v) ? v[0] : v;
+  }
+  try {
+    const sp = new URL(req.url || '', 'http://localhost').searchParams;
+    for (const [k, v] of sp.entries()) if (out[k] == null || out[k] === '') out[k] = v;
+  } catch (_) { /* 무시 */ }
+  return out;
+}
+
+// 열쇠 비교. 앞뒤 공백과 따옴표가 섞여도 통과하도록 다듬어 비교한다
+function normKey(v) {
+  return String(v == null ? '' : v).trim().replace(/^["']|["']$/g, '');
+}
+function keyMatches(given, expected) {
+  const a = normKey(given), b = normKey(expected);
+  return !!b && a === b;
+}
+
 function hasStore() { return !!env(); }
 
-module.exports = { cmd, pipeline, allEntries, parseBody, hasStore, LIST_KEY, htmlKey };
+module.exports = {
+  cmd, pipeline, allEntries, parseBody, getQuery, normKey, keyMatches,
+  hasStore, LIST_KEY, htmlKey,
+};
